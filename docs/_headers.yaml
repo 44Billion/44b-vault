@@ -1,0 +1,5 @@
+# this file adds custom headers to github pages
+#
+# sw.js will handle cache
+Cache-Control: no-store
+Content-Security-Policy: frame-ancestors https://44billion.net

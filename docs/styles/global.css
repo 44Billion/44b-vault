@@ -1,0 +1,79 @@
+:root {
+  color-scheme: dark light;
+}
+
+@media (prefers-color-scheme: light) {
+  html {
+    filter: invert(1) hue-rotate(180deg);
+  }
+  img, video, iframe, svg, .photo-picker > .icon-wrapper {
+    /* inverts it back */
+    filter: invert(1) hue-rotate(180deg);
+  }
+}
+
+.invisible {
+  display: none !important;
+}
+
+body {
+  color: oklch(0.78 0 89.88);
+}
+
+body.vscode {
+  background-color: oklch(0.22 0 89.88) !important;
+}
+
+body.detached {
+  background-color: oklch(0.22 0 89.88);
+  width: 360px;
+}
+
+body > div {
+  padding: 0 6px 6px 6px;
+  background-color: oklch(0.3 0.12 274.76);
+  border-radius: 8px;
+}
+
+.field {
+  width: 100%;
+}
+
+label {
+  font-size: 14rem;
+  padding-left: 4px;
+}
+
+label:after {
+  display: block;
+  content: '';
+  padding-bottom: 5px;
+}
+
+input {
+  width: 100%;
+  background-color: oklch(0.19 0 89.88);
+  color: oklch(0.78 0 89.88);
+  border: 0;
+  height: 30rem;
+  font-size: 410px;
+  border-radius: 7px;
+  padding: 14px 10px;
+}
+
+input[type="text"] {
+  font-size: 15rem;
+}
+
+h2 {
+  font-size: 15rem;
+}
+
+.pulsate {
+  animation: pulsate .7s infinite alternate;
+}
+
+@keyframes pulsate {
+  from { opacity: 1 }
+  to { opacity: 0.5 }
+}

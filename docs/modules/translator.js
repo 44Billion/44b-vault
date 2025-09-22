@@ -1,0 +1,72 @@
+import { config, languages } from 'config'
+import { toKebabCase } from 'helpers'
+
+const locales = {
+  // header
+  vaultName: { en: 'Secure Login', pt: 'Login Seguro', hasDomNode: true },
+  back: { en: 'Back', pt: 'Voltar', hasDomNode: true },
+  // /
+  updateAvailable: { en: 'New Version Available!', pt: 'Nova Versão Disponível!', hasDomNode: true },
+  refresh: { en: 'Refresh', pt: 'Atualizar', hasDomNode: true },
+  newAccount: { en: 'New Account', pt: 'Nova Conta', hasDomNode: true },
+
+  addAccount: { en: 'Add Existing Account', pt: 'Adicionar Conta Existente', hasDomNode: true },
+  addAccountWithPasskey: { en: 'Sign In', pt: 'Entrar', hasDomNode: true },
+  addAccountWithNsec: { en: 'Paste Account Key (nsec)', pt: 'Digitar Chave de Conta (nsec)', hasDomNode: true },
+
+  backupKeys: { en: 'Backup Accounts', pt: 'Fazer Backup das Contas', hasDomNode: true },
+  lock: { en: 'Lock Screen', pt: 'Bloquear Tela', hasDomNode: true },
+  unlock: { en: 'Unlock Screen', pt: 'Desbloquear Tela', hasDomNode: true },
+  unlockPasskeyName: { en: 'Use This Just to Unlock Screen', pt: 'Use Este Apenas p/ Desbloquear Tela' },
+  logout: { en: 'Log Out', pt: 'Sair', hasDomNode: true },
+  // /info
+  isVaultSecure: { en: 'What makes "Secure Login" a secure credential vault?', pt: 'O que torna o "Login Seguro" um cofre de credenciais realmente seguro?', hasDomNode: true },
+  vaultSecurityExplanation1: { en: 'Your user credentials are stored on the device\'s Secure Element chip.', pt: 'Suas credenciais de usuário são salvas no chip seguro SE do dispositivo.', hasDomNode: true },
+  vaultSecurityExplanation2: { en: 'The vault is loaded in a sandboxed iframe with browser\'s cross-domain security policies.', pt: 'O "Login Seguro" é carregado em um iframe isolado pelas políticas de segurança do navegador para domínios distintos.', hasDomNode: true },
+  vaultSecurityExplanation3: { en: 'Its code is open-source, easily auditable and hosted by Github Pages without modifications.', pt: 'Seu código é aberto, facilmente auditável e hospedado no Github Pages sem alterações.', hasDomNode: true },
+  vaultSecurityExplanation4: { en: 'Anyone can host it under their own Github user or elsewhere.', pt: 'Qualquer pessoa pode hospedá-lo sob seu próprio usuário Github ou em servidor próprio.', hasDomNode: true },
+  readMore: { en: 'Read More', pt: 'Leia Mais', hasDomNode: true },
+  // /new-account
+  displayName: { en: 'Account Name', pt: 'Nome da Conta', hasDomNode: true },
+  displayNamePlaceholder: { en: 'My Nickname', pt: 'Meu Apelido', hasDomNode: true, domAttributes: ['placeholder'] },
+  createAccount: { en: 'Create Account', pt: 'Criar Conta', hasDomNode: true },
+  // /lock
+  nameAccountGroup: { en: 'Give a name to this account group:', pt: 'Dê um nome p/ este grupo de contas:', hasDomNode: true },
+  accountGroupDescription: { en: 'I Use These For Fun', pt: 'Uso para Diversão', hasDomNode: true, domAttributes: ['placeholder'] },
+  // modules/messenger.js
+  reqIdTypeError: { en: 'reqId field must be a string', pt: 'Campo reqId precisa ser textual' },
+  unknownMessageCodeError: { en: 'Unknown message code', pt: 'O "code" da mensagem é desconhecido' },
+  // modules/session-manager.js
+  sessionKeyDoesntExistError: { en: 'Session key doesn\'t exist', pt: 'Chave da sessão não existe' },
+  // modules/translator.js
+  unsupportedLanguageCode: { en: 'Unsupported language code. It must be one of these:',
+    pt: 'Código da língua não-suportado. Use um destes:' }
+}
+
+const t = ({ l = config.lang, key }) => locales[key][l] ?? `${l}.${key}`
+const getDomTranslationAttributes = key => locales[key].domAttributes ?? ['innerText']
+
+function initTranslation () {
+  translateTo(config.lang)
+}
+
+const domLocaleEntries = Object.entries(locales).filter(([, v]) => v.hasDomNode).map(([k]) => [`t-${toKebabCase(k)}`, k])
+function translateTo (l) {
+  if (!languages[l]) throw new Error(`${t({ key: 'unsupportedLanguageCode' })} ${Object.keys(languages).join(', ')}.`)
+  config.lang = l
+
+  domLocaleEntries.forEach(([nodeClass, key]) => {
+    [...document.getElementsByClassName(nodeClass)]
+      .forEach(node => {
+        getDomTranslationAttributes(key).forEach(domAttr => {
+          node[domAttr] = t({ l, key })
+        })
+      })
+  })
+}
+
+export {
+  initTranslation,
+  translateTo,
+  t
+}

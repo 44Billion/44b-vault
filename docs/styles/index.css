@@ -1,0 +1,320 @@
+#vault-header {
+  height: 28px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-family: ui-monospace, monospace;
+  font-size: 13rem;
+}
+
+#vault-title {
+  padding: 0 2px;
+}
+
+.vault-action-btn {
+  padding: 0 4px;
+  display: flex;
+}
+
+.vault-action-btn > .gg-info {
+  --ggs: 0.82;
+}
+
+.vault-action-btn .arrow-left.icon:before {
+  width: 7px;
+  height: 7px;
+  top: -3px;
+}
+
+#info-btn {
+  padding: 0 2px 0 18px;
+}
+
+#back-text {
+  line-height: 1.62;
+  padding-left: 0px;
+}
+
+#update-vault-btn {
+  --ggs: 0.8;
+}
+
+#update-vault-btn .robot-emoji {
+  position: relative;
+  left: 4px;
+}
+
+#update-vault-btn .t-update-available {
+  font-style: italic;
+}
+
+#update-vault-btn .t-refresh {
+  position: relative;
+  left: 4px;
+  color: oklch(0.71 0.18 151.75);
+}
+
+#update-vault-btn .gg-redo {
+  color: oklch(0.71 0.18 151.75);
+}
+
+.btn {
+  display: flex;
+  align-items: center;
+  height: 35px;
+  padding: 0 3px;
+  border-bottom: 1px solid oklch(0.18 0 0);
+  width: 100%;
+}
+
+.btn > span {
+  padding: 0 10px;
+}
+
+.btn .icon, .btn .arrow-right.icon {
+  color: oklch(0.78 0 89.88);
+}
+
+.btn:last-child {
+  border-bottom: 0;
+}
+
+.btn-label {
+  padding: 0 5px;
+  line-height: 1;
+  flex-grow: 1;
+  flex-shrink: 1;
+}
+
+.icon-wrapper {
+  width: 20px;
+  height: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.btn {
+  padding: 0 6px;
+}
+
+#view {
+  overflow: hidden;
+  border-radius: 12px;
+  background-color: oklch(0.22 0 0);
+  transition: height ease-in-out .3s;
+}
+
+#pages {
+  display: flex;
+  flex-wrap: nowrap;
+  transition: transform ease-in-out .3s;
+}
+
+.page .arrow-right.icon.chevron:before {
+  right: 0px;
+}
+
+.page {
+  flex-shrink: 0;
+  /* width */
+  flex-basis: 100%;
+}
+
+.page > div {
+  /* prevent parent-child collapsing margins https://stackoverflow.com/a/19719427 */
+  overflow: auto;
+}
+
+.page > div.action-view {
+  /* min height same as always-visible #page-0 */
+  /* display: flex; */
+}
+
+.action-view {
+  /*
+    to inherit page-0's (inherit cause page-0 is always
+    visible - or a taller visible page) height
+  */
+  min-height: 100%;
+  /*
+    prefer padding if may add min-height: 100%;
+    so that min-height won't need to be
+    calc(100% - <vertical-margin>)
+  */
+  padding: 6px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.action-btns {
+  margin-top: 10px;
+  display: flex;
+  width: 100%;
+}
+
+.action-btns > button, .action-btns > a {
+  flex-grow: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 35px;
+  padding: 0 3px;
+  border: 1px solid oklch(0.58 0 89.88);
+  border-radius: 7px;
+  margin-right: 6px;
+}
+
+.action-btns > button:last-child, .action-btns > a:last-child {
+  margin-right: 0;
+}
+
+#\/ {
+  z-index: 0;
+  position: relative;
+}
+
+#\/ .user-add-icon-wrapper {
+  position: relative;
+  left: 5px;
+  width: auto;
+}
+
+#screen-lock {
+  position: absolute;
+  inset: 0;
+  justify-content: space-between;
+}
+
+#fingerprint-icon {
+  justify-content: center;
+  margin: 10px 0 15px;
+}
+
+#screen-lock, #fingerprint-icon {
+  background-color: oklch(0.22 0 0);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#screen-lock-icon, #fingerprint-icon {
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+#screen-lock-icon .icon-wrapper, #fingerprint-icon .icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;;
+  background-color: oklch(1 0 89.88 / 0.18);
+  background-color: light-dark(oklch(0.45 0 89.88 / 0.18), oklch(1 0 89.88 / 0.18));
+}
+
+#screen-lock-icon .icon-wrapper {
+  --ggs: 2;
+}
+
+#screen-lock-icon i {
+  margin-bottom: 15px;
+}
+
+#fingerprint-icon svg {
+  scale: 2;
+}
+
+#new-session-label {
+  padding: 0 0 3px 3px;
+  font-size: 15rem;
+}
+
+#new-session-input::placeholder {
+  font-style: italic;
+}
+
+#\/info {
+  font-size: 14rem;
+}
+
+#\/info h2 {
+  margin: 5px 10px 13px;
+  text-align: justify;
+}
+
+#\/info ol {
+  margin-right: 10px;
+}
+
+#\/info li {
+  margin-bottom: 10px;
+}
+
+#\/info a {
+  font-size: 16rem;
+}
+
+#\/new-account > div:first-child {
+  /*flex-basis: 100%;*/ /* height */
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#\/new-account .photo-picker {
+  /* padding-top: 6px; */
+  /* background-color: red; */
+  /*  */
+  margin-top: 10px;
+  border: 1px solid oklch(0.58 0 89.88);
+  border-radius: 50%;
+  position: relative;
+}
+
+#\/new-account .icon-wrapper:has(> .gg-girl) {
+  width: 65px;
+  height: 65px;
+  --ggs: 2.3;
+}
+
+#\/new-account .icon-wrapper:has(> .gg-add-r) {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 21px;
+  height: 21px;
+  /* --ggs: 2.3; */
+}
+
+#\/new-account .field {
+  padding: 3px 10px 10px;
+}
+
+#\/new-account .gg-add-r {
+  color: oklch(0.22 0 0);
+  background-color: oklch(0.88 0.2 160.14);
+}
+
+#home-lock {
+  padding-left: 2px;
+  --ggs: 0.65;
+}
+
+#\/add-account .fingerprint-icon {
+  position: relative;
+  top: 1px;
+  left: 3px;
+  scale: 1.1
+}
+
+#\/add-account .nsec-icon-wrapper {
+  position: relative;
+}
+
+#\/add-account .nsec-icon-wrapper i {
+  position: absolute;
+  left: -2px;
+  scale: .75;
+}
