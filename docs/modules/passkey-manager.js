@@ -50,7 +50,7 @@ async function storeAccountPrivkeyInSecureElement ({ privkey, displayName }) {
     publicKey: publicKeyCredentialCreationOptions
   }).then(v => {
     if (v.authenticatorAttachment !== 'platform') {
-      throw new Error(`Another device was used`)
+      throw new Error('Another device was used')
     }
     return v
   })
@@ -151,7 +151,7 @@ async function storeUnlockPrivkeyInSecureElement ({ privkey }) {
     publicKey: publicKeyCredentialCreationOptions
   }).then(v => {
     if (v.authenticatorAttachment !== 'platform') {
-      throw new Error(`Another device was used`)
+      throw new Error('Another device was used')
     }
     return v
   }).then(v => {

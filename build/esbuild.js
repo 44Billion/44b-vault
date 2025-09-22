@@ -1,15 +1,14 @@
-/*
-  npx -p=esbuild@0.23.0 \
-      -p=nostr-tools@2.7.1 \
-      -p=@noble/curves@1.4.2 \
-      -p=@noble/hashes@1.4.0 \
-      node esbuild.js
-*/
 import * as esbuild from 'esbuild'
+import { fileURLToPath } from 'node:url'
+import { dirname } from 'node:path'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 await esbuild.build({
+  absWorkingDir: __dirname,
   entryPoints: ['nostr.js'],
-  outdir: '../modules',
+  outdir: '../docs/modules',
   entryNames: '[name]',
   bundle: true,
   // exclude ../modules/helpers.js from bundle

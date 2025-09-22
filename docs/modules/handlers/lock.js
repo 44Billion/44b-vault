@@ -16,7 +16,7 @@ function enableButton () {
   lockBtn.getElementsByClassName('t-lock')[0].classList.remove('pulsate')
 }
 
-function onButtonClick () {
+async function onButtonClick () {
   disableButton()
 
   if (await idb.hasCurrentSessionEverBeenLocked()) {
@@ -51,7 +51,8 @@ function onButtonClick () {
       // it makes no sense to store it, cause only the user can change it and we wouldn't know?
       // or would us know on .get?
       name: sessionName,
-      passPubkey,
+      passkeyPubkey,
+      passkeyAlgoId,
       pubkey: sessionPubkey
     })
     await idb.updateCurrentSession({

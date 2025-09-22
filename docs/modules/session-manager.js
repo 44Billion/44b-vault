@@ -26,7 +26,7 @@ export function initSession () {
         break
       }
       default: {
-        throw new Error('${e.data.code} is an unknown broadcasted message code')
+        throw new Error(`${e.data.code} is an unknown broadcasted message code`)
       }
     }
   })
@@ -47,7 +47,7 @@ async function lockScreenOrStartNewSession () {
 }
 
 function logoutSessionAccountHandler ({ pubkey }) {
-  if (pubkey) throw new Error('LOGOUT_ACCOUNT needs pubkey')
+  if (!pubkey) throw new Error('LOGOUT_ACCOUNT needs pubkey')
   NostrSigner.cleanup(pubkey)
 }
 export async function logoutSessionAccount (pubkey) {
@@ -59,10 +59,10 @@ export async function logoutSessionAccount (pubkey) {
 function logoutSessionAccountsHandler () {
   NostrSigner.cleanupAll()
 }
-export function logoutSessionAccounts () {
+export async function logoutSessionAccounts () {
   logoutSessionAccountsHandler()
   sessionChannel.postMessage({ code: 'LOGOUT_SESSION_ACCOUNTS' })
-  // if (/* no session accs left */) return lockScreenOrStartNewSession()
+  if (/* no session accs left */ !await idb.hasOnceLockedSessions()) return lockScreenOrStartNewSession()
 }
 
 function lockSessionHandler () {
@@ -82,7 +82,7 @@ async function unlockSessionHandlerForTabThatStartedAction ({ sessionPrivkey }) 
     if (idbSession) {
       await idb.setCurrentSession(sessionPubkey, sessionPrivkey) // add privkey to idb
     } else { throw new Error() }
-  } catch (err) {
+  } catch (_err) {
     throw new Error(t({ key: 'sessionKeyDoesntExistError' }))
   }
 }

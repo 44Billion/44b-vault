@@ -1,4 +1,4 @@
-import { router } from "router"
+import { router } from 'router'
 import { getQueryParam } from 'helpers'
 
 router.addEventListener('routechange', () => {

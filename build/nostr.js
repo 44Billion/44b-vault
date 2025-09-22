@@ -1,12 +1,11 @@
-
 import { getPublicKey as getPublicKeyFromUint8Array } from 'nostr-tools/pure'
+import { v2 as nip44v2 } from 'nostr-tools/nip44'
+import { secp256k1, schnorr } from '@noble/curves/secp256k1.js'
+import { extract as hkdfExtract } from '@noble/hashes/hkdf.js'
+import { sha256 } from '@noble/hashes/sha2.js'
+import { bytesToHex, hexToBytes } from 'helpers'
 export * as nip04 from 'nostr-tools/nip04'
 export { npubEncode } from 'nostr-tools/nip19'
-import { v2 as nip44v2 } from 'nostr-tools/nip44'
-import { secp256k1 } from '@noble/curves/secp256k1'
-import { extract as hkdfExtract } from '@noble/hashes/hkdf'
-import { sha256 } from '@noble/hashes/sha256'
-import { bytesToHex, hexToBytes } from 'helpers'
 
 function getConversationKey (privkeyA, pubkeyB, salt) {
   salt ??= 'nip44-v2'
@@ -35,13 +34,41 @@ export function obfuscate (privkey, payload, salt) {
 export function generatePrivateKey () {
   const randomBytes = crypto.getRandomValues(new Uint8Array(40))
   const B256 = 2n ** 256n // secp256k1 is short weierstrass curve
-  const N = B256 - 0x14551231950b75fc4402da1732fc9bebfn; // curve (group) order
+  const N = B256 - 0x14551231950b75fc4402da1732fc9bebfn // curve (group) order
   const bytesToNumber = b => BigInt('0x' + (bytesToHex(b) || '0'))
-  const mod = (a, b) => { let r = a % b; return r >= 0n ? r : b + r; } // mod division
+  const mod = (a, b) => { const r = a % b; return r >= 0n ? r : b + r } // mod division
   const num = mod(bytesToNumber(randomBytes), N - 1n) + 1n // takes at least n+8 bytes
   return num.toString(16).padStart(64, '0')
 }
 
 export function getPublicKey (privkey) {
   return getPublicKeyFromUint8Array(hexToBytes(privkey))
+}
+
+function serializeEvent (event) {
+  return JSON.stringify([
+    0,
+    event.pubkey,
+    event.created_at,
+    event.kind,
+    event.tags,
+    event.content
+  ])
+}
+
+function getEventHash (event) {
+  return sha256(new TextEncoder().encode(serializeEvent(event)))
+}
+
+function getSignature (eventHash, privkey) {
+  return bytesToHex(schnorr.sign(eventHash, privkey))
+}
+
+export function finalizeEvent (event, privkey, withSig = true) {
+  event.pubkey ??= getPublicKey(privkey)
+  const eventHash = event.id ? hexToBytes(event.id) : getEventHash(event)
+  event.id ??= bytesToHex(eventHash)
+  if (withSig) event.sig ??= getSignature(eventHash, privkey)
+  else delete event.sig
+  return event
 }

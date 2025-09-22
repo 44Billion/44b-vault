@@ -12,6 +12,7 @@ async function initDb (...args) {
 }
 function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
   const req = indexedDB.open(dbName, dbVersion)
+  // eslint-disable-next-line prefer-const, promise/param-names
   let resolve, reject, promise = new Promise((rs, rj) => { resolve = rs; reject = rj })
 
   req.onupgradeneeded = async function (e) {
@@ -32,7 +33,8 @@ function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
       at 'sessions' store
       {
         name, // can't be changed (it is stored on Secure Element)
-        passPubkey, // not used for now; can't be changed (it is stored on Secure Element)
+        passkeyPubkey, // not used for now; can't be changed (it is stored on Secure Element)
+        passkeyAlgoId, // not used for now
         pubkey,
         eAccountPubkeys=e({ [pubkey]: true }) // NIP-44 encrypted with session privkey and session pubkey
       }
@@ -65,7 +67,7 @@ function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
   req.onerror = function () { reject(req.error) }
   req.onsuccess = function () {
     const db = req.result
-    db.onversionchange = function() {
+    db.onversionchange = function () {
       db.close()
       location.reload(true)
     }
@@ -76,17 +78,22 @@ function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
   return promise
 }
 
-async function run (method, args = [], storeName, indexName) {
-  let resolve, reject, promise = new Promise((rs, rj) => { resolve = rs; reject = rj })
-  const db = await _initDb()
-  const txMode = ['get', 'getKey', 'count'].includes(method) ? 'readonly' : 'readwrite'
-  const tx = db.transaction([storeName], txMode)
-  const store = tx.objectStore(storeName)
-  const storeOrIndex = indexName ? store.index(indexName) : store
+async function run (method, args = [], storeName, indexName, { p = Promise.withResolvers(), tx, txMode = tx?.mode, storeOrIndex } = {}) {
+  if (!tx) {
+    const db = await _initDb()
+    // one may pre-select it if it wants to use many different methods in a row
+    txMode ??= ['get', 'getKey', 'count'].includes(method) ? 'readonly' : 'readwrite'
+    tx = db.transaction([storeName], txMode)
+  }
+  if (!storeOrIndex) {
+    const store = tx.objectStore(storeName)
+    storeOrIndex = indexName ? store.index(indexName) : store
+  }
+
   const req = storeOrIndex[method](...args)
-  req.onsuccess = ({ target: { result } }) => { resolve(result) }
-  req.onerror = ({ target: { error } }) => { reject(error) }
-  return promise
+  req.onsuccess = () => { p.resolve({ result: req.result, tx, storeOrIndex }) } // don't add p
+  req.onerror = () => { p.reject(req.error); tx.abort() }
+  return p.promise
 }
 
 async function updatePendingCurrentSessionAssociations (currentSession) {
@@ -95,11 +102,12 @@ async function updatePendingCurrentSessionAssociations (currentSession) {
     // never locked current session (no privkey) won't have 'sessions' store association
     !currentSession?.privkey ||
     // we currently don't care about which dirty fields
-    !/* dirtyFields = */ currentSession.pendingAssociationUpdateFields
+    // !(dirtyFields = currentSession.pendingAssociationUpdateFields)
+    !currentSession.pendingAssociationUpdateFields
   ) return
 
   const sessionPubkey = getPublicKey(currentSession.privkey)
-  const session = await run('get', [sessionPubkey], 'session')
+  const session = await run('get', [sessionPubkey], 'session').then(v => v.result)
   if (!session) throw new Error('Should had created session (when locking for the first time) before calling updatePendingCurrentSessionAssociations')
 
   const ck = await nip44.getConversationKey(currentSession.privkey, session.pubkey)
@@ -120,13 +128,13 @@ async function updatedCurrentSession (currentSession) {
 }
 // sessions never locked won't be persisted on sessions store
 async function hasOnceLockedSessions () {
-  !!await run('getKey', [IDBKeyRange.bound(MIN_KEY, MAX_KEY)], 'sessions')
+  return !!await run('getKey', [IDBKeyRange.bound(MIN_KEY, MAX_KEY)], 'sessions').then(v => v.result)
 }
 async function hasCurrentSessionEverBeenLocked () {
   return !!(await getCurrentSession()).privkey
 }
 async function getCurrentSession () {
-  return run('get', [IDBKeyRange.bound(MIN_KEY, MAX_KEY)], 'current-session')
+  return run('get', [IDBKeyRange.bound(MIN_KEY, MAX_KEY)], 'current-session').then(v => v.result)
 }
 async function startFreshSession () {
   const currentSession = {
@@ -136,17 +144,18 @@ async function startFreshSession () {
   return currentSession
 }
 async function getCurrentOrNewSession () {
-  let currentSession = await getCurrentSession()
+  const currentSession = await getCurrentSession()
   if (currentSession) {
     await updatePendingCurrentSessionAssociations(currentSession)
     return currentSession
   } else {
     if (await hasOnceLockedSessions()) return
-    else return startFreshSession()
+    return startFreshSession()
   }
 }
 
 async function appendLog (log) {
+  // eslint-disable-next-line prefer-const, promise/param-names
   let resolve, reject, promise = new Promise((rs, rj) => { resolve = rs; reject = rj })
   const db = await _initDb()
   const tx = db.transaction(['logs'], 'readwrite')
@@ -163,8 +172,8 @@ async function trimLog () {
   const upperBoundKey = await new Promise(resolve => {
     const tx = db.transaction(['logs'], 'readonly')
     const store = tx.objectStore('logs')
-    const req = store.openKeyCursor(undefined, 'prev');
-    let isFirstRun = false
+    const req = store.openKeyCursor(undefined, 'prev')
+    const isFirstRun = false
     req.onsuccess = ({ result: cursor }) => {
       if (!cursor) return resolve()
       if (isFirstRun) { return cursor.advance(maxEntries - 1) }
@@ -174,6 +183,7 @@ async function trimLog () {
   })
   if (upperBoundKey === undefined) return
 
+  // eslint-disable-next-line prefer-const, promise/param-names
   let resolve, reject, promise = new Promise((rs, rj) => { resolve = rs; reject = rj })
   const tx = db.transaction(['logs'], 'readwrite')
   const store = tx.objectStore('logs')
@@ -183,7 +193,7 @@ async function trimLog () {
   return promise
 }
 
-(function scheduleTrimLog() {
+(function scheduleTrimLog () {
   setTimeout(async () => {
     await trimLog()
     scheduleTrimLog()

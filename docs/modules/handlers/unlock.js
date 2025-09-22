@@ -1,4 +1,3 @@
-
 import { getSessionPrivkeyFromSecureElement } from 'passkey-manager'
 import { unlockSession } from 'session-manager'
 

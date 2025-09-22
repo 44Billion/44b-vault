@@ -1,4 +1,12 @@
 import idb from 'idb'
+import { getPublicKey, finalizeEvent, nip44, nip04 } from 'nostr'
+
+// Capture stable references to avoid post-load monkey-patching
+const nip44GetConversationKey = nip44.getConversationKey.bind(nip44)
+const nip44Encrypt = nip44.encrypt.bind(nip44)
+const nip44Decrypt = nip44.decrypt.bind(nip44)
+const nip04Encrypt = nip04.encrypt.bind(nip04)
+const nip04Decrypt = nip04.decrypt.bind(nip04)
 
 ;(function keepLastMemoedNostrSigners () {
   setTimeout(() => {
@@ -8,16 +16,28 @@ import idb from 'idb'
   }, 60000)
 })()
 
+// Isolated from class prototype
+const privateKeys = new WeakMap()
+
 export default class NostrSigner {
   static nostrSignersByPubkey = {}
+  #_pubkey
+  #resultGcTimeout
+  #conversationKeyGcTimeout
+  #resultsByReqId = {}
+  #conversationKeys = {}
 
   constructor (privkey) {
-    Object.assign(this, {
-      privkey
-    })
+    privateKeys.set(this, privkey)
+    this.#_pubkey = getPublicKey(privkey)
+    // Prevents signer.leak = () => this.#privkey
+    Object.preventExtensions(this)
     this.scheduleResultGc()
     this.scheduleConversationKeyGc()
   }
+
+  get #privkey () { return privateKeys.get(this) }
+  get #pubkey () { return this.#_pubkey }
 
   static cleanupAll () {
     this.nostrSignersByPubkey = {}
@@ -25,11 +45,15 @@ export default class NostrSigner {
 
   static cleanup (pubkey) {
     const signer = this.nostrSignersByPubkey[pubkey]
-    signer.resultsByReqId = {}
-    signer.conversationKeys = {}
-    clearTimeout(signer.resultGcTimeout)
-    clearTimeout(signer.conversationKeyGcTimeout)
+    if (signer && typeof signer.cleanup === 'function') signer.cleanup()
     delete this.nostrSignersByPubkey[pubkey]
+  }
+
+  cleanup () {
+    this.#resultsByReqId = {}
+    this.#conversationKeys = {}
+    clearTimeout(this.#resultGcTimeout)
+    clearTimeout(this.#conversationKeyGcTimeout)
   }
 
   static async run ({ reqId, pubkey, method, params }) {
@@ -63,51 +87,58 @@ export default class NostrSigner {
     }
   }
 
-  resultsByReqId = { /* [id]: result */ }
   scheduleResultGc () {
-    this.resultGcTimeout = setTimeout(() => {
-      Object.keys(this.resultsByReqId).reverse().slice(20)
-        .forEach(v => delete this.resultsByReqId[v])
+    this.#resultGcTimeout = setTimeout(() => {
+      Object.keys(this.#resultsByReqId).reverse().slice(20)
+        .forEach(v => delete this.#resultsByReqId[v])
       this.scheduleGc()
     }, 60000)
   }
 
   get_public_key () {
-    return Promise.resolve(this.pubkey)
+    return Promise.resolve(this.#pubkey)
   }
 
   sign_event () {
-
+    return finalizeEvent(event, this.#privkey)
   }
 
-  get_relays ({ kind, content, tags, created_at }) {
-    return Promise.resolve({})
+  get_relays () {
+    return Promise.resolve({ read: [], write: [] })
   }
 
   nip04_encrypt (peerPubkey, plaintext) {
-
+    return nip04Encrypt(this.#privkey, peerPubkey, plaintext)
   }
 
   nip04_decrypt (peerPubkey, ciphertext) {
-
+    return nip04Decrypt(this.#privkey, peerPubkey, ciphertext)
   }
 
-
-  conversationKeys = { /* [pk + peerPk + salt]: ck */ }
   scheduleConversationKeyGc () {
-    this.conversationKeyGcTimeout = setTimeout(() => {
-      Object.keys(this.conversationKeys).reverse().slice(10)
-        .forEach(v => delete this.conversationKeys[v])
+    this.#conversationKeyGcTimeout = setTimeout(() => {
+      Object.keys(this.#conversationKeys).reverse().slice(10)
+        .forEach(v => delete this.#conversationKeys[v])
       this.scheduleGc()
     }, 60000)
   }
   nip44_encrypt (peerPubkey, plaintext, salt) {
     salt ??= 'nip44-v2'
-
+    const cacheKey = `${this.#pubkey}+${peerPubkey}+${salt}`
+    const ck = this.#conversationKeys[cacheKey] ??=
+      nip44GetConversationKey(this.#privkey, peerPubkey, salt)
+    return nip44Encrypt(plaintext, ck)
   }
 
   nip44_decrypt (peerPubkey, ciphertext, salt) {
     salt ??= 'nip44-v2'
-
+    const cacheKey = `${this.#pubkey}+${peerPubkey}+${salt}`
+    const ck = this.#conversationKeys[cacheKey] ??=
+      nip44GetConversationKey(this.#privkey, peerPubkey, salt)
+    return nip44Decrypt(ciphertext, ck)
   }
 }
+
+// Prevent prototype/constructor tampering and method injection
+Object.freeze(NostrSigner.prototype)
+Object.freeze(NostrSigner)
