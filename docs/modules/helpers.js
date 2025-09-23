@@ -21,8 +21,8 @@ const toAllCaps = string =>
       /\.?([A-Z0-9]+)/g,
       (_match, chars) => '_' + chars
     )
-      .replace(/^_/, '')
-      .toUpperCase()
+    .replace(/^_/, '')
+    .toUpperCase()
 
 const typeof2 = variable => Object.prototype.toString.call(variable).slice(8, -1).toLowerCase()
 
@@ -44,6 +44,11 @@ function hexToBytes (hexString) {
   return arr
 }
 
+function maybeUnref (timer) {
+  if (typeof window === 'undefined') timer.unref()
+  return timer
+}
+
 export {
   getQueryParam,
   toKebabCase,
@@ -51,5 +56,6 @@ export {
   typeof2,
   getRandomId,
   bytesToHex,
-  hexToBytes
+  hexToBytes,
+  maybeUnref
 }

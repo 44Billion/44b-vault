@@ -1,34 +1,8 @@
 import { getPublicKey as getPublicKeyFromUint8Array } from 'nostr-tools/pure'
-import { v2 as nip44v2 } from 'nostr-tools/nip44'
-import { secp256k1, schnorr } from '@noble/curves/secp256k1.js'
-import { extract as hkdfExtract } from '@noble/hashes/hkdf.js'
+import { schnorr } from '@noble/curves/secp256k1.js'
 import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex, hexToBytes } from 'helpers'
-export * as nip04 from 'nostr-tools/nip04'
 export { npubEncode } from 'nostr-tools/nip19'
-
-function getConversationKey (privkeyA, pubkeyB, salt) {
-  salt ??= 'nip44-v2'
-  if (salt.length > 32) throw new Error('invalid salt length')
-
-  const sharedX = secp256k1.getSharedSecret(privkeyA, '02' + pubkeyB).subarray(1, 33)
-  return hkdfExtract(sha256, sharedX, salt)
-}
-const nip44 = {
-  encrypt: nip44v2.encrypt,
-  decrypt: nip44v2.decrypt,
-  getConversationKey
-}
-export {
-  nip44
-}
-
-// deterministic
-export function obfuscate (privkey, payload, salt) {
-  salt ??= 'default'
-  const key = hkdfExtract(sha256, privkey, salt)
-  return bytesToHex(sha256(key + payload))
-}
 
 // https://github.com/paulmillr/noble-secp256k1/blob/b032053763c0d4ba107c18fee28344f64242b075/index.js#L457
 export function generatePrivateKey () {

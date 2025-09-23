@@ -1,40 +1,107 @@
 // maybe make them /apis/profile.js
-import { relay } from 'nostr'
+import nostrRelays, { seedRelays, freeRelays } from 'nostr-relays'
+import { npubEncode } from 'nostr'
 import { getSvgAvatar } from 'avatar'
-
-// kinds 0 and 10002
-const hardCodedProfileRelays = [
-  'wss://purplepag.es',
-  'wss://user.kindpag.es',
-  'wss://relay.nostr.band' // indexer
-]
-const defaultNip65Relays = [
-  'wss://nostr-pub.wellorder.net',
-  'wss://relay.damus.io',
-  'wss://relay.primal.net'
-]
+import { getRandomId, maybeUnref } from 'helpers'
 
 const profilesByPubkey = {}
-export async function getProfile (pubkey) {
+export async function getProfile (pubkey,
+  { _nostrRelays = nostrRelays, _getRelays = getRelays, _getSvgAvatar = getSvgAvatar } = {}
+) {
   if (profilesByPubkey[pubkey]) return profilesByPubkey[pubkey]
   let profile
   let isntFallback
   try {
-
-    isntFallback = true
+    const { write: writeRelays } = await _getRelays(pubkey)
+    const { result, errors } = await _nostrRelays.getEvents({ kinds: [0], authors: [pubkey], limit: 1 }, writeRelays)
+    const event = result.sort((a, b) => b.created_at - a.created_at)[0]
+    if (!event) {
+      if (errors.length) throw new Error(errors.join('\n'))
+      isntFallback = false
+    } else {
+      const eventContent = JSON.parse(event.content)
+      profile = {
+        name:
+          event.tags
+            .filter(t => ['name', 'display_name'].includes(t[0]) && t[1]?.trim?.())
+            .sort((a, b) => (b[0] === 'display_name' ? -1 : 1) - (a[0] === 'display_name' ? -1 : 1))[0]
+            ?.[1]?.trim?.() ||
+          eventContent.name?.trim?.() ||
+          eventContent.display_name?.trim?.() ||
+          `User#${getRandomId().slice(0, 5)}`,
+        about:
+          [event.tags.find(t => t[0] === 'about')]
+            .filter(Boolean)
+            .map(t => t[1]?.trim?.())[0] ||
+          eventContent.about?.trim?.() ||
+          '',
+        picture:
+          [event.tags.find(t => t[0] === 'picture')]
+            .filter(Boolean)
+            .map(t => t[1]?.trim?.())[0] ||
+          eventContent.picture?.trim?.() ||
+          await _getSvgAvatar(pubkey),
+        npub: npubEncode(pubkey),
+        event
+      }
+      isntFallback = true
+    }
   } catch (err) {
     isntFallback = false
     console.log(err.stack)
   }
-  if (!profile) profile = await getSvgAvatar(pubkey)
+
+  if (!profile) {
+    profile = {
+      name: `User#${getRandomId().slice(0, 5)}`,
+      about: '',
+      picture: await _getSvgAvatar(pubkey),
+      npub: npubEncode(pubkey),
+      event: null
+    }
+  }
 
   if (isntFallback) {
     profilesByPubkey[pubkey] = profile
-    setTimeout(() => { delete profilesByPubkey[pubkey] }, 3 * 60 * 1000)
+    maybeUnref(setTimeout(
+      () => { delete profilesByPubkey[pubkey] },
+      3 * 60 * 1000
+    ))
   }
   return profile
 }
 
-export async function setProfile (profile) {
+export async function setProfile (pubkey, profile) {
 
+}
+
+const relaysByPubkey = {}
+export async function getRelays (pubkey, { _nostrRelays = nostrRelays } = {}) {
+  if (relaysByPubkey[pubkey]) return relaysByPubkey[pubkey]
+
+  const { result: getEventsResult, errors } = await nostrRelays.getEvents({ kinds: [10002], authors: [pubkey], limit: 1 }, seedRelays)
+  const event = getEventsResult.sort((a, b) => b.created_at - a.created_at)[0]
+  if (!event) {
+    if (errors.length) console.log(errors)
+    return { read: freeRelays, write: freeRelays, event: null }
+  }
+
+  const result = event.tags.filter(t => t[0] === 'r').reduce((r, t) => {
+    switch (t[2]) {
+      case 'read': r.read.push(t[1]); break
+      case 'write': r.write.push(t[1]); break
+      case '':
+      default: r.read.push(t[1]); r.write.push(t[1])
+    }
+    return r
+  }, { read: [], write: [], event })
+  result.read = [...new Set(result.read)]
+  result.write = [...new Set(result.write)]
+
+  relaysByPubkey[pubkey] = result
+  maybeUnref(setTimeout(
+    () => { delete relaysByPubkey[pubkey] },
+    3 * 60 * 1000
+  ))
+  return result
 }

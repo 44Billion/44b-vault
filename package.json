@@ -25,8 +25,9 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "node --test 'tests/**/*.test.js'",
-    "build:nostr": "node build/esbuild.js"
+    "test": "node --import ./register-import-map.js --test 'tests/**/*.test.js'",
+    "test:only": "node --import ./register-import-map.js --test --test-only 'tests/**/*.test.js'",
+    "build:nostr": "node --import ./register-import-map.js build/esbuild.js"
   },
   "devDependencies": {
     "@noble/curves": "^2.0.1",

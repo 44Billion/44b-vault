@@ -7,9 +7,9 @@ const __dirname = dirname(__filename)
 
 await esbuild.build({
   absWorkingDir: __dirname,
-  entryPoints: ['nostr.js'],
+  entryPoints: ['nostr/index.js'],
   outdir: '../docs/modules',
-  entryNames: '[name]',
+  entryNames: 'nostr',
   bundle: true,
   // exclude ../modules/helpers.js from bundle
   external: ['helpers'],

@@ -1,5 +1,6 @@
 import idb from 'idb'
-import { npubEncode, getPublicKey, getDisplayNameFromNostrProfile } from 'nostr'
+import { npubEncode, getPublicKey } from 'nostr'
+import { getProfile } from 'queries'
 import { bytesToHex, hexToBytes } from 'helpers'
 import { t } from 'translator'
 
@@ -76,15 +77,15 @@ async function getPrivkeyFromSecureElement () {
   // If used an external device, clone passkey on the local device
   if (authenticatorAttachment !== 'platform') {
     const pubkey = getPublicKey(privkey)
-    const displayName = await getDisplayNameFromNostrProfile(pubkey) || ''
+    const displayName = (await getProfile(pubkey)).name || ''
     await storeAccountPrivkeyInSecureElement({ privkey, displayName })
   }
   return privkey
 }
 
 // Do this to confirm a sensitive operation
-async function reauthenticateWithPasskey () {
-  const { privkey } = await idb.getCurrentSession() || {}
+// TODO: use at signer cause privkey is a private instance prop
+async function reauthenticateWithPasskey (privkey) {
   if (!privkey) return false
 
   // we only know the current unlocked session key
