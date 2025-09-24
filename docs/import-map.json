@@ -9,7 +9,7 @@
     "messenger": "./modules/messenger.js",
     "nostr-relays": "./modules/nostr-relays.js",
     "nostr-signer": "./modules/nostr-signer.js",
-    "nostr": "../build/nostr/index.js",
+    "nostr": "./modules/nostr.js",
     "queries": "./modules/queries.js",
     "router": "./modules/router.js",
     "session-manager": "./modules/session-manager.js",
