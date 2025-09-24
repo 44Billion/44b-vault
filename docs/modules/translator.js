@@ -1,5 +1,5 @@
 import { config, languages } from 'config'
-import { toKebabCase } from 'helpers'
+import { toKebabCase } from 'helpers/string.js'
 
 const locales = {
   // header
@@ -30,17 +30,26 @@ const locales = {
   displayName: { en: 'Account Name', pt: 'Nome da Conta', hasDomNode: true },
   displayNamePlaceholder: { en: 'My Nickname', pt: 'Meu Apelido', hasDomNode: true, domAttributes: ['placeholder'] },
   createAccount: { en: 'Create Account', pt: 'Criar Conta', hasDomNode: true },
+  createAccountError: { en: 'Error creating account', pt: 'Erro ao criar conta' },
+  displayNameRequired: { en: 'Name is required', pt: 'Nome é obrigatório' },
   // /lock
   nameAccountGroup: { en: 'Give a name to this account group:', pt: 'Dê um nome p/ este grupo de contas:', hasDomNode: true },
   accountGroupDescription: { en: 'I Use These For Fun', pt: 'Uso para Diversão', hasDomNode: true, domAttributes: ['placeholder'] },
+  // overlay messages
+  successMessage: { en: 'Success', pt: 'Sucesso', hasDomNode: true },
+  ok: { en: 'OK', pt: 'OK', hasDomNode: true },
+  errorMessage: { en: 'Error', pt: 'Erro', hasDomNode: true },
+  close: { en: 'Close', pt: 'Fechar', hasDomNode: true },
   // modules/messenger.js
   reqIdTypeError: { en: 'reqId field must be a string', pt: 'Campo reqId precisa ser textual' },
   unknownMessageCodeError: { en: 'Unknown message code', pt: 'O "code" da mensagem é desconhecido' },
   // modules/session-manager.js
   sessionKeyDoesntExistError: { en: 'Session key doesn\'t exist', pt: 'Chave da sessão não existe' },
   // modules/translator.js
-  unsupportedLanguageCode: { en: 'Unsupported language code. It must be one of these:',
-    pt: 'Código da língua não-suportado. Use um destes:' }
+  unsupportedLanguageCode: {
+    en: 'Unsupported language code. It must be one of these:',
+    pt: 'Código da língua não-suportado. Use um destes:'
+  }
 }
 
 const t = ({ l = config.lang, key }) => locales[key][l] ?? `${l}.${key}`

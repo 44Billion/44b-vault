@@ -1,5 +1,6 @@
 import { config } from 'config'
-import { typeof2, toAllCaps } from 'helpers'
+import { typeof2 } from 'helpers/misc.js'
+import { toAllCaps } from 'helpers/string.js'
 import { translateTo, t } from 'translator'
 import idb from 'idb'
 import NostrSigner from 'nostr-signer'

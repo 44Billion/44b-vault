@@ -1,6 +1,6 @@
 import { extract as hkdfExtract } from '@noble/hashes/hkdf.js'
 import { sha256 } from '@noble/hashes/sha2.js'
-import { bytesToHex } from 'helpers'
+import { bytesToHex } from 'helpers/misc.js'
 
 // deterministic
 export function obfuscate (privkey, payload, salt) {

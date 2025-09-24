@@ -1,4 +1,4 @@
-import { getQueryParam } from 'helpers'
+import { getQueryParam } from 'helpers/misc.js'
 import { changeDimensions } from 'messenger'
 
 const routes = {

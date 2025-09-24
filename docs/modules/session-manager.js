@@ -31,7 +31,7 @@ export function initSession () {
     }
   })
 
-  return _initSession()
+  // return _initSession()
 }
 
 async function _initSession () {

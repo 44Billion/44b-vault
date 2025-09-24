@@ -103,6 +103,7 @@
   border-radius: 12px;
   background-color: oklch(0.22 0 0);
   transition: height ease-in-out .3s;
+  position: relative;
 }
 
 #pages {
@@ -194,7 +195,7 @@
 
 #screen-lock, #fingerprint-icon {
   background-color: oklch(0.22 0 0);
-  z-index: 1;
+  z-index: 30;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -317,4 +318,116 @@
   position: absolute;
   left: -2px;
   scale: .75;
+}
+
+#success-overlay, #error-overlay {
+  position: absolute;
+  inset: 0;
+  background-color: oklch(0.22 0 0);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+#error-overlay {
+  z-index: 10;
+}
+
+#success-overlay {
+  z-index: 20;
+}
+
+.overlay-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+}
+
+.overlay-message {
+  text-align: center;
+  margin: 0;
+  font-size: 16rem;
+  flex: 0;
+  display: flex;
+  flex-direction: row;
+  align-items : center;
+}
+
+.error-details {
+  margin: 3px 0 0 5px;
+  padding: 3px 3px;
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 12rem;
+  color: rgba(255, 255, 255, 0.8);
+  max-width: 300px;
+  max-height: 60px;
+  overflow: auto;
+  word-wrap: break-word;
+}
+
+#success-icon, #error-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin: 0;
+  flex: 0;
+}
+
+#success-icon .icon-wrapper, #error-icon .icon-wrapper {
+  width: min(60px, 15vmin);
+  height: min(60px, 15vmin);
+  min-width: 24px;
+  min-height: 24px;
+  border-radius: 50%;
+  background-color: oklch(1 0 89.88 / 0.18);
+  background-color: light-dark(oklch(0.45 0 89.88 / 0.18), oklch(1 0 89.88 / 0.18));
+  --ggs: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  margin: 0 0 10px 0;
+}
+
+.success-color {
+  color: #22c55e;
+}
+
+.error-color {
+  color: #ef4444;
+}
+
+.success-dismiss, .error-dismiss {
+  background-color: transparent;
+  border: 2px solid currentColor;
+  padding: 12px 24px;
+  border-radius: 6px;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.success-dismiss {
+  color: #22c55e;
+  border-color: #22c55e;
+}
+
+.success-dismiss:hover {
+  background-color: #22c55e;
+  color: white;
+}
+
+.error-dismiss {
+  color: #ef4444;
+  border-color: #ef4444;
+}
+
+.error-dismiss:hover {
+  background-color: #ef4444;
+  color: white;
 }

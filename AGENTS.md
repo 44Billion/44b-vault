@@ -121,7 +121,8 @@ The vault operates within an iframe to create a security boundary:
 ### Icons
 - **CSS-only Icons** - No SVG for security reasons
 - **Sources**: css.gg and cssicon.space
-- **Location**: `/styles/icons.css`
+- **Location**: `/docs/styles/icons.css`
+- **Important**: When adding new icons to HTML, always add their CSS definitions to `/docs/styles/icons.css` from the respective icon libraries
 
 ## Development Guidelines
 

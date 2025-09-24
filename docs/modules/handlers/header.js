@@ -1,5 +1,5 @@
 import { router } from 'router'
-import { getQueryParam } from 'helpers'
+import { getQueryParam } from 'helpers/misc.js'
 
 router.addEventListener('routechange', () => {
   const page = getQueryParam('page') || '0'

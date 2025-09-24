@@ -26,7 +26,7 @@ const inlineImportMap = `  <script type="importmap">
   </script>`
 
 // Replace the import map in the HTML
-const importMapRegex = /  <script type="importmap">[\s\S]*?  <\/script>/
+const importMapRegex = / {2}<script type="importmap">[\s\S]*? {2}<\/script>/
 if (importMapRegex.test(html)) {
   html = html.replace(importMapRegex, inlineImportMap)
 } else {

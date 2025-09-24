@@ -1,6 +1,6 @@
 import { router } from 'router'
 import { lockSession } from 'session-manager'
-import idb from 'idb'
+// import idb from 'idb'
 
 const homeNode = document.getElementById('/')
 homeNode.addEventListener('click', async e => {
@@ -24,7 +24,7 @@ homeNode.addEventListener('click', async e => {
 })
 
 async function maybeHandleLockBtnWithoutRouteChange () {
-  const hasntLockedBefore = !(await idb.hasCurrentSessionEverBeenLocked())
+  const hasntLockedBefore = true // !(await idb.hasCurrentSessionEverBeenLocked())
   if (hasntLockedBefore) return false
 
   lockSession()

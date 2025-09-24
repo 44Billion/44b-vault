@@ -3,6 +3,7 @@ function initHandlers () {
     'header',
     'home',
     'new-account',
+    'overlays'
     // 'lock'
   ]
   return Promise.all(handlers.map(v => import(`./${v}.js`)))

@@ -1,4 +1,4 @@
-import { getQueryParam } from 'helpers'
+import { getQueryParam } from 'helpers/misc.js'
 
 const languages = {
   en: true,

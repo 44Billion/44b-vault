@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict'
 import { it } from 'node:test'
-import { getProfile } from '../docs/modules/queries.js'
+import { getProfile } from 'queries'
 
 it('#getProfile', async () => {
   let kind0 = {
@@ -32,7 +32,7 @@ it('#getProfile', async () => {
   assert.equal(profile.about, 'Just a test user 2')
   assert.equal(profile.picture, 'https://example.com/alice2.png')
   assert.equal(profile.npub.length, 63)
-  assert.equal(profile.event.id, kind0.id)
+  assert.equal(profile.meta.events[0].id, kind0.id)
 
   // from cache
   const profile2 = await getProfile(
@@ -56,5 +56,5 @@ it('#getProfile', async () => {
   assert.equal(profile3.about, 'Just a test user')
   assert.equal(profile3.picture, 'https://example.com/alice.png')
   assert.equal(profile3.npub.length, 63)
-  assert.equal(profile3.event.id, kind0.id)
+  assert.equal(profile3.meta.events[0].id, kind0.id)
 })

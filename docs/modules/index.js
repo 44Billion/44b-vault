@@ -5,7 +5,7 @@ import { initSession } from 'session-manager'
 import { initTranslation } from 'translator'
 import { changeDimensions } from 'messenger'
 import { initHandlers } from 'handlers'
-import { getQueryParam } from 'helpers'
+import { getQueryParam } from 'helpers/misc.js'
 
 // await initSw({ swUpdateReadyHandler })
 await initConfig()
@@ -37,7 +37,7 @@ await initDb()
 })()
 
 async function load (isntInIframe) {
-  await initSession()
+  // await initSession()
   await initTranslation()
   await initHandlers()
   await showBody(isntInIframe)

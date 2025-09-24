@@ -1,5 +1,6 @@
-import { getRandomId } from 'helpers'
+import { getRandomId } from 'helpers/misc.js'
 
+// TODO: offline
 export const getSvgAvatar = async function (seed) {
   try {
     return await fetchApi(getAvatarUrl(seed), { headers: getHeaders() })

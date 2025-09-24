@@ -2,7 +2,7 @@
 import nostrRelays, { seedRelays, freeRelays } from 'nostr-relays'
 import { npubEncode } from 'nostr'
 import { getSvgAvatar } from 'avatar'
-import { getRandomId, maybeUnref } from 'helpers'
+import { getRandomId, maybeUnref } from 'helpers/misc.js'
 
 const profilesByPubkey = {}
 export async function getProfile (pubkey,
@@ -19,31 +19,7 @@ export async function getProfile (pubkey,
       if (errors.length) throw new Error(errors.join('\n'))
       isntFallback = false
     } else {
-      const eventContent = JSON.parse(event.content)
-      profile = {
-        name:
-          event.tags
-            .filter(t => ['name', 'display_name'].includes(t[0]) && t[1]?.trim?.())
-            .sort((a, b) => (b[0] === 'display_name' ? -1 : 1) - (a[0] === 'display_name' ? -1 : 1))[0]
-            ?.[1]?.trim?.() ||
-          eventContent.name?.trim?.() ||
-          eventContent.display_name?.trim?.() ||
-          `User#${getRandomId().slice(0, 5)}`,
-        about:
-          [event.tags.find(t => t[0] === 'about')]
-            .filter(Boolean)
-            .map(t => t[1]?.trim?.())[0] ||
-          eventContent.about?.trim?.() ||
-          '',
-        picture:
-          [event.tags.find(t => t[0] === 'picture')]
-            .filter(Boolean)
-            .map(t => t[1]?.trim?.())[0] ||
-          eventContent.picture?.trim?.() ||
-          await _getSvgAvatar(pubkey),
-        npub: npubEncode(pubkey),
-        event
-      }
+      profile = eventToProfile(event, { _getSvgAvatar })
       isntFallback = true
     }
   } catch (err) {
@@ -57,7 +33,9 @@ export async function getProfile (pubkey,
       about: '',
       picture: await _getSvgAvatar(pubkey),
       npub: npubEncode(pubkey),
-      event: null
+      meta: {
+        events: []
+      }
     }
   }
 
@@ -70,9 +48,42 @@ export async function getProfile (pubkey,
   }
   return profile
 }
-
-export async function setProfile (pubkey, profile) {
-
+export async function eventToProfile (event, { _getSvgAvatar = getSvgAvatar } = {}) {
+  if (typeof event !== 'object' || event === null || event.kind !== 0 || typeof event.pubkey !== 'string') {
+    throw new Error('invalid event')
+  }
+  let eventContent = {}
+  try {
+    eventContent = JSON.parse(event.content)
+  } catch (_err) {
+    eventContent = {}
+  }
+  return {
+    name:
+      event.tags
+        .filter(t => ['name', 'display_name'].includes(t[0]) && t[1]?.trim?.())
+        .sort((a, b) => (b[0] === 'display_name' ? -1 : 1) - (a[0] === 'display_name' ? -1 : 1))[0]
+        ?.[1]?.trim?.() ||
+      eventContent.name?.trim?.() ||
+      eventContent.display_name?.trim?.() ||
+      `User#${getRandomId().slice(0, 5)}`,
+    about:
+      [event.tags.find(t => t[0] === 'about')]
+        .filter(Boolean)
+        .map(t => t[1]?.trim?.())[0] ||
+      eventContent.about?.trim?.() ||
+      '',
+    picture:
+      [event.tags.find(t => t[0] === 'picture')]
+        .filter(Boolean)
+        .map(t => t[1]?.trim?.())[0] ||
+      eventContent.picture?.trim?.() ||
+      await _getSvgAvatar(event.pubkey),
+    npub: npubEncode(event.pubkey),
+    meta: {
+      events: [event]
+    }
+  }
 }
 
 const relaysByPubkey = {}
@@ -83,7 +94,20 @@ export async function getRelays (pubkey, { _nostrRelays = nostrRelays } = {}) {
   const event = getEventsResult.sort((a, b) => b.created_at - a.created_at)[0]
   if (!event) {
     if (errors.length) console.log(errors)
-    return { read: freeRelays, write: freeRelays, event: null }
+    return { read: freeRelays, write: freeRelays, meta: { events: [] } }
+  }
+
+  const relays = eventToRelays(event)
+  relaysByPubkey[pubkey] = relays
+  maybeUnref(setTimeout(
+    () => { delete relaysByPubkey[pubkey] },
+    3 * 60 * 1000
+  ))
+  return relays
+}
+export function eventToRelays (event) {
+  if (typeof event !== 'object' || event === null || event.kind !== 10002 || typeof event.pubkey !== 'string') {
+    throw new Error('invalid event')
   }
 
   const result = event.tags.filter(t => t[0] === 'r').reduce((r, t) => {
@@ -94,14 +118,9 @@ export async function getRelays (pubkey, { _nostrRelays = nostrRelays } = {}) {
       default: r.read.push(t[1]); r.write.push(t[1])
     }
     return r
-  }, { read: [], write: [], event })
+  }, { read: [], write: [], meta: { events: [event] } })
   result.read = [...new Set(result.read)]
   result.write = [...new Set(result.write)]
 
-  relaysByPubkey[pubkey] = result
-  maybeUnref(setTimeout(
-    () => { delete relaysByPubkey[pubkey] },
-    3 * 60 * 1000
-  ))
   return result
 }

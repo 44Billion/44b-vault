@@ -20,48 +20,46 @@ function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
     if (e.oldVersion < 1) {
       /*
       {
-        id, // auto; use the first record
-        ?privkey, // if absent, this is a session that has never been locked
-        accountPubkeys={ [pubkey]: true },
-        ?pendingAssociationUpdateFields={ "privkey"|"accountPubkeys": true }
-      }
-      */
-      db.createObjectStore('current-session', { keyPath: 'id', autoIncrement: true })
-      /*
-      This is created when we lock current session for the first time,
-      when we set its privkey at 'current-session' store, thus pubkey here
-      at 'sessions' store
-      {
-        name, // can't be changed (it is stored on Secure Element)
-        passkeyPubkey, // not used for now; can't be changed (it is stored on Secure Element)
-        passkeyAlgoId, // not used for now
         pubkey,
-        eAccountPubkeys=e({ [pubkey]: true }) // NIP-44 encrypted with session privkey and session pubkey
+        profile: {},
+        relays: {},
+        ts // last update
       }
       */
-      db.createObjectStore('sessions', { keyPath: 'pubkey' })
-      /*
-      {
-        sessionPubkey,
-        oPubkey, // NIP-44 obfuscated with session privkey and account pubkey
-        ePrivkey // NIP-44 encrypted with session privkey and account pubkey
-      }
-      */
-      db.createObjectStore('accounts', { keyPath: ['sessionPubkey', 'pubkey'] })
+      db.createObjectStore('accounts', { keyPath: 'pubkey' })
       /*
       {
         id, // auto; not the request id
-        origin, // iframe parent
-        app, // delegator app, informed by delegatee
+        origin, // iframe parent, optional
+        appId, // delegator app, informed by delegatee, from +<fullAppId>
         status, // success || failure
         ts,
         pubkey,
         method,
         params,
-        ?message // on failure
+        ?message // on failure (ex: 'NOT_PERMITTED')
       }
       */
       db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true })
+      /*
+      {
+        appId, // from +<fullAppId>
+        eKind, // e.g.: '<0|1|10002|...|empty string means "all kinds">'
+        name, // e.g.: 'decryption|signing|new-permission-example|...'
+        ts
+      }
+      */
+      db.createObjectStore('permissions', { keyPath: ['appId', 'eKind', 'name'] })
+      /*
+      {
+        id, // from +<fullAppId>
+        alias, // abc@44billion.net, i.e. from +<appIdAlias>
+        name, // from bundle event
+        icon, // from bundle event
+        ts
+      }
+      */
+      db.createObjectStore('apps', { keyPath: 'id' })
     }
   }
   req.onerror = function () { reject(req.error) }
@@ -200,8 +198,13 @@ async function trimLog () {
   }, 60000 * 5)
 })()
 
+async function createOrUpdateAccount (account) {
+  return run('put', [{ ...account, ts: Date.now() }], 'accounts')
+}
+
 Object.assign(idb, {
   run,
+  createOrUpdateAccount,
   getCurrentSession,
   getCurrentOrNewSession,
   updatedCurrentSession,
@@ -211,7 +214,7 @@ Object.assign(idb, {
   hasCurrentSessionEverBeenLocked,
   appendLog
 })
-await idb.updatePendingCurrentSessionAssociations()
+// await idb.updatePendingCurrentSessionAssociations()
 export default idb
 export {
   initDb

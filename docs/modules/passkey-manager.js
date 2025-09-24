@@ -1,7 +1,6 @@
-import idb from 'idb'
 import { npubEncode, getPublicKey } from 'nostr'
 import { getProfile } from 'queries'
-import { bytesToHex, hexToBytes } from 'helpers'
+import { bytesToHex, hexToBytes } from 'helpers/misc.js'
 import { t } from 'translator'
 
 // Notes:
@@ -23,7 +22,10 @@ import { t } from 'translator'
 
 async function storeAccountPrivkeyInSecureElement ({ privkey, displayName }) {
   displayName = displayName?.trim?.() ?? ''
-  const name = npubEncode(getPublicKey(privkey))
+  const npub = npubEncode(getPublicKey(privkey))
+  // Some implementations only show user.name
+  // and npub alone isn't very friendly
+  const name = displayName ? `${displayName} (${npub})` : npub
   const publicKeyCredentialCreationOptions = {
     challenge: crypto.getRandomValues(new Uint8Array(32)),
     rp: {

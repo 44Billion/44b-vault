@@ -17,5 +17,5 @@ await esbuild.build({
   format: 'esm',
   // https://caniuse.com/?search=top%20level%20await
   target: ['edge89', 'firefox89', 'chrome89', 'safari15'],
-  minify: true
+  minify: false
 })

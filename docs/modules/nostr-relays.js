@@ -1,5 +1,5 @@
 import { Relay } from 'nostr'
-import { maybeUnref } from 'helpers'
+import { maybeUnref } from 'helpers/misc.js'
 
 export const seedRelays = [
   'wss://purplepag.es',

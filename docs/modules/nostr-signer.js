@@ -1,5 +1,6 @@
 import idb from 'idb'
 import { getPublicKey, finalizeEvent, nip44, nip04 } from 'nostr'
+import { hexToBytes } from 'helpers/misc.js'
 
 // Capture stable references to avoid post-load monkey-patching
 const nip44GetConversationKey = nip44.getConversationKey.bind(nip44)
@@ -8,45 +9,62 @@ const nip44Decrypt = nip44.decrypt.bind(nip44)
 const nip04Encrypt = nip04.encrypt.bind(nip04)
 const nip04Decrypt = nip04.decrypt.bind(nip04)
 
-;(function keepLastMemoedNostrSigners () {
-  setTimeout(() => {
-    Object.keys(NostrSigner.nostrSignersByPubkey).reverse().slice(2)
-      .forEach(v => { NostrSigner.nostrSignersByPubkey[v].cleanup() })
-    keepLastMemoedNostrSigners()
-  }, 60000)
-})()
+// TODO: clear only those not used recently
+// ;(function keepLastMemoedNostrSigners () {
+//   setTimeout(() => {
+//     Object.keys(NostrSigner.#nostrSignersByPubkey).reverse().slice(2)
+//       .forEach(v => { NostrSigner.#nostrSignersByPubkey[v].cleanup() })
+//     keepLastMemoedNostrSigners()
+//   }, 60000)
+// })()
 
 // Isolated from class prototype
 const privateKeys = new WeakMap()
+const createToken = Symbol('createToken')
 
 export default class NostrSigner {
-  static nostrSignersByPubkey = {}
+  static #nostrSignersByPubkey = {}
   #_pubkey
   #resultGcTimeout
   #conversationKeyGcTimeout
   #resultsByReqId = {}
   #conversationKeys = {}
 
-  constructor (privkey) {
-    privateKeys.set(this, privkey)
-    this.#_pubkey = getPublicKey(privkey)
-    // Prevents signer.leak = () => this.#privkey
-    Object.preventExtensions(this)
-    this.scheduleResultGc()
-    this.scheduleConversationKeyGc()
+  // This also caches the privkey on memory
+  // to avoid asking user to unlock with passkey
+  // the next time we need to sign/encrypt things
+  static getOrCreate (privkey) {
+    if (!privkey) throw new Error('Missing privkey arg.')
+    return (this.#nostrSignersByPubkey[getPublicKey(privkey)] ??= new this(createToken, privkey))
   }
 
+  constructor (token, privkey) {
+    if (token !== createToken) throw new Error('Use NostrSigner.create(?sk) to instantiate this class.')
+
+    privateKeys.set(this, hexToBytes(privkey))
+    // Prevents signer.leak = () => this.#privkey
+    Object.preventExtensions(this)
+    this.#scheduleResultGc()
+    this.#scheduleConversationKeyGc()
+  }
+  // bytes
   get #privkey () { return privateKeys.get(this) }
-  get #pubkey () { return this.#_pubkey }
+  // hex
+  get #pubkey () { return (this.#_pubkey ??= getPublicKey(this.#privkey)) }
 
   static cleanupAll () {
-    this.nostrSignersByPubkey = {}
+    this.#nostrSignersByPubkey = {}
+  }
+
+  static revoke (signer) {
+    if (!(signer instanceof NostrSigner)) throw new Error('Expected instance of NostrSigner')
+    this.cleanup(signer.#pubkey)
   }
 
   static cleanup (pubkey) {
-    const signer = this.nostrSignersByPubkey[pubkey]
+    const signer = this.#nostrSignersByPubkey[pubkey]
     if (signer && typeof signer.cleanup === 'function') signer.cleanup()
-    delete this.nostrSignersByPubkey[pubkey]
+    delete this.#nostrSignersByPubkey[pubkey]
   }
 
   cleanup () {
@@ -87,54 +105,54 @@ export default class NostrSigner {
     }
   }
 
-  scheduleResultGc () {
+  #scheduleResultGc () {
     this.#resultGcTimeout = setTimeout(() => {
       Object.keys(this.#resultsByReqId).reverse().slice(20)
         .forEach(v => delete this.#resultsByReqId[v])
-      this.scheduleGc()
+      this.#scheduleResultGc()
     }, 60000)
   }
 
-  get_public_key () {
-    return Promise.resolve(this.#pubkey)
+  getPublicKey () {
+    return this.#pubkey
   }
 
-  sign_event () {
+  signEvent (event) {
     return finalizeEvent(event, this.#privkey)
   }
 
-  get_relays () {
-    return Promise.resolve({ read: [], write: [] })
+  getRelays () {
+    return { read: [], write: [] }
   }
 
-  nip04_encrypt (peerPubkey, plaintext) {
-    return nip04Encrypt(this.#privkey, peerPubkey, plaintext)
+  nip04Encrypt (peerPubkey, plaintext) {
+    return nip04Encrypt(this.#privkey, hexToBytes(peerPubkey), plaintext)
   }
 
-  nip04_decrypt (peerPubkey, ciphertext) {
-    return nip04Decrypt(this.#privkey, peerPubkey, ciphertext)
+  nip04Decrypt (peerPubkey, ciphertext) {
+    return nip04Decrypt(this.#privkey, hexToBytes(peerPubkey), ciphertext)
   }
 
-  scheduleConversationKeyGc () {
+  #scheduleConversationKeyGc () {
     this.#conversationKeyGcTimeout = setTimeout(() => {
       Object.keys(this.#conversationKeys).reverse().slice(10)
         .forEach(v => delete this.#conversationKeys[v])
-      this.scheduleGc()
+      this.#scheduleConversationKeyGc()
     }, 60000)
   }
-  nip44_encrypt (peerPubkey, plaintext, salt) {
+  nip44Encrypt (peerPubkey, plaintext, salt) {
     salt ??= 'nip44-v2'
     const cacheKey = `${this.#pubkey}+${peerPubkey}+${salt}`
     const ck = this.#conversationKeys[cacheKey] ??=
-      nip44GetConversationKey(this.#privkey, peerPubkey, salt)
+      nip44GetConversationKey(this.#privkey, hexToBytes(peerPubkey), salt)
     return nip44Encrypt(plaintext, ck)
   }
 
-  nip44_decrypt (peerPubkey, ciphertext, salt) {
+  nip44Decrypt (peerPubkey, ciphertext, salt) {
     salt ??= 'nip44-v2'
     const cacheKey = `${this.#pubkey}+${peerPubkey}+${salt}`
     const ck = this.#conversationKeys[cacheKey] ??=
-      nip44GetConversationKey(this.#privkey, peerPubkey, salt)
+      nip44GetConversationKey(this.#privkey, hexToBytes(peerPubkey), salt)
     return nip44Decrypt(ciphertext, ck)
   }
 }
