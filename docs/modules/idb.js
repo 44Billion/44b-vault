@@ -202,9 +202,14 @@ async function createOrUpdateAccount (account) {
   return run('put', [{ ...account, ts: Date.now() }], 'accounts')
 }
 
+async function getAccountByPubkey (pubkey) {
+  return run('get', [pubkey], 'accounts').then(v => v.result)
+}
+
 Object.assign(idb, {
   run,
   createOrUpdateAccount,
+  getAccountByPubkey,
   getCurrentSession,
   getCurrentOrNewSession,
   updatedCurrentSession,

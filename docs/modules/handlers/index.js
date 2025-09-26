@@ -3,6 +3,8 @@ function initHandlers () {
     'header',
     'home',
     'new-account',
+    'add-account',
+    'add-account-with-passkey',
     'overlays'
     // 'lock'
   ]

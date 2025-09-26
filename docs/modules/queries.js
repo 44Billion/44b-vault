@@ -94,7 +94,7 @@ export async function getRelays (pubkey, { _nostrRelays = nostrRelays } = {}) {
   const event = getEventsResult.sort((a, b) => b.created_at - a.created_at)[0]
   if (!event) {
     if (errors.length) console.log(errors)
-    return { read: freeRelays, write: freeRelays, meta: { events: [] } }
+    return { read: freeRelays.slice(0, 2), write: freeRelays.slice(0, 2), meta: { events: [] } }
   }
 
   const relays = eventToRelays(event)

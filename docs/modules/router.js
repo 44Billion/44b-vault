@@ -18,6 +18,10 @@ const routes = {
     page: 1,
     stateKey: null
   },
+  '/add-account-with-passkey': {
+    page: 2,
+    stateKey: null
+  },
   '/backup-accounts': {
     page: 1,
     stateKey: null
@@ -29,7 +33,7 @@ const routes = {
   '/logout': {
     page: 1,
     stateKey: null
-  },
+  }
 }
 const routesByPage = Object.entries(routes).reduce((r, [k, v]) => {
   r[v.page] ??= []
@@ -55,7 +59,7 @@ class Router extends EventTarget {
   }
 
   #emitRouteChangeEvent (detail) {
-    this.dispatchEvent(new CustomEvent("routechange", { detail }))
+    this.dispatchEvent(new CustomEvent('routechange', { detail }))
   }
 
   #transitionPage () {

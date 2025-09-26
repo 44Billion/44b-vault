@@ -29,7 +29,9 @@
     "test:only": "node --import ./register-import-map.js --test --test-only 'tests/**/*.test.js'",
     "build:nostr": "node --import ./register-import-map.js build/esbuild.js",
     "sync-import-map": "node sync-import-map.js",
-    "build": "npm run build:nostr && npm run sync-import-map"
+    "build": "npm run build:nostr && npm run sync-import-map",
+    "start": "cd docs && python3 -m http.server",
+    "end": "pkill -f 'python3 -m http.server'"
   },
   "devDependencies": {
     "@noble/curves": "^2.0.1",

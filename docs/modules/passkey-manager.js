@@ -72,10 +72,13 @@ async function getPrivkeyFromSecureElement () {
       'hybrid' // e.g: external mobile phone (not USB/NFC security key)
     ]
   }
-  const { rawId, authenticatorAttachment } = await navigator.credentials.get({
+  // { rawId } is the identifier for the specific passkey being created
+  // not the same as user.id (privkey) from credentials.create(), which is
+  // the same as { response: { userHandle } } from credentials.get()
+  const { response: { userHandle }, authenticatorAttachment } = await navigator.credentials.get({
     publicKey: publicKeyCredentialRequestOptions
   })
-  const privkey = bytesToHex(new Uint8Array(rawId /* ArrayBuffer */))
+  const privkey = bytesToHex(new Uint8Array(userHandle /* ArrayBuffer */))
   // If used an external device, clone passkey on the local device
   if (authenticatorAttachment !== 'platform') {
     const pubkey = getPublicKey(privkey)
@@ -92,7 +95,7 @@ async function reauthenticateWithPasskey (privkey) {
 
   // we only know the current unlocked session key
   const publicKeyCredentialDescriptor = {
-    id: hexToBytes(privkey),
+    id: 'fixme', // hexToBytes(privkey), // wrong! this id is the credential's rawId, not user.id
     type: 'public-key',
     // just locally created passkey because even when we add
     // an account from an external device's passkey, we create
@@ -174,10 +177,10 @@ async function getUnlockPrivkeyFromSecureElement () {
     userVerification: 'required', // e.g: ask for OS password if no biometric/PIN support
     hints: ['client-device'] // unlocking just makes sense with passkey created on local device
   }
-  const { rawId } = await navigator.credentials.get({
+  const { response: { userHandle } } = await navigator.credentials.get({
     publicKey: publicKeyCredentialRequestOptions
   })
-  const unlockPrivkey = bytesToHex(new Uint8Array(rawId /* ArrayBuffer */))
+  const unlockPrivkey = bytesToHex(new Uint8Array(userHandle /* ArrayBuffer */))
   // don't forget to delete it after locking again
   // storeOnIdb() .. do this on the unlock handler? do it here to make sure we dont forget it? no YES
   return unlockPrivkey

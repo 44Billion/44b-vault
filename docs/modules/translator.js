@@ -13,6 +13,12 @@ const locales = {
   addAccount: { en: 'Add Existing Account', pt: 'Adicionar Conta Existente', hasDomNode: true },
   addAccountWithPasskey: { en: 'Sign In', pt: 'Entrar', hasDomNode: true },
   addAccountWithNsec: { en: 'Paste Account Key (nsec)', pt: 'Digitar Chave de Conta (nsec)', hasDomNode: true },
+  loadAccountDescription: {
+    en: 'We will retrieve your account from your device\'s secure storage and add it to this session.',
+    pt: 'Vamos recuperar sua conta do armazenamento seguro do dispositivo e adicioná-la a esta sessão.',
+    hasDomNode: true
+  },
+  loadAccountButton: { en: 'Load My Account', pt: 'Carregar Minha Conta', hasDomNode: true },
 
   backupKeys: { en: 'Backup Accounts', pt: 'Fazer Backup das Contas', hasDomNode: true },
   lock: { en: 'Lock Screen', pt: 'Bloquear Tela', hasDomNode: true },
@@ -40,6 +46,8 @@ const locales = {
   ok: { en: 'OK', pt: 'OK', hasDomNode: true },
   errorMessage: { en: 'Error', pt: 'Erro', hasDomNode: true },
   close: { en: 'Close', pt: 'Fechar', hasDomNode: true },
+  accountLoadedSuccessfully: { en: 'Account loaded successfully', pt: 'Conta carregada com sucesso' },
+  accountLoadError: { en: 'Error loading account', pt: 'Erro ao carregar conta' },
   // modules/messenger.js
   reqIdTypeError: { en: 'reqId field must be a string', pt: 'Campo reqId precisa ser textual' },
   unknownMessageCodeError: { en: 'Unknown message code', pt: 'O "code" da mensagem é desconhecido' },

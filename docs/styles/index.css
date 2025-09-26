@@ -370,6 +370,13 @@
   word-wrap: break-word;
 }
 
+.t-load-account-description {
+  padding: 0 4px;
+  word-break: break-all;
+  hyphens: auto;
+  text-align: center;
+}
+
 #success-icon, #error-icon {
   display: flex;
   flex-direction: column;
