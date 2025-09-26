@@ -6,6 +6,7 @@ import { initTranslation } from 'translator'
 import { changeDimensions } from 'messenger'
 import { initHandlers } from 'handlers'
 import { getQueryParam } from 'helpers/misc.js'
+import { maybeShowAuthenticatorOverlay } from 'handlers/authenticator-overlay.js'
 
 // await initSw({ swUpdateReadyHandler })
 await initConfig()
@@ -43,7 +44,7 @@ async function load (isntInIframe) {
   await showBody(isntInIframe)
 }
 
-function showBody (isntInIframe) {
+async function showBody (isntInIframe) {
   if (isntInIframe) document.body.classList.add('detached')
   if (config.isDev) {
     console.log('config', config)
@@ -52,6 +53,7 @@ function showBody (isntInIframe) {
     document.getElementById('pages').style.transition = 'none'
   }
   if (config.mode !== 'widget') document.getElementById('/').classList.add('invisible')
+  await maybeShowAuthenticatorOverlay()
   document.body.classList.remove('invisible')
 
   const oldHeight = document.getElementById('vault').getBoundingClientRect().height

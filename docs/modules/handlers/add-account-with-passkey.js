@@ -29,7 +29,6 @@ async function onButtonClick () {
   try {
     // Get private key from secure element
     const { passkeyRawId, privkey } = await getPrivkeyFromSecureElement()
-    console.log('Loaded privkey from passkey:', privkey, typeof privkey)
     const pubkey = getPublicKey(privkey)
 
     // Check if account already exists in idb

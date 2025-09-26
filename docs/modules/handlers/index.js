@@ -6,7 +6,8 @@ function initHandlers () {
     'add-account',
     'add-account-with-passkey',
     'add-account-with-nsec',
-    'overlays'
+    'overlays',
+    'authenticator-overlay'
     // 'lock'
   ]
   return Promise.all(handlers.map(v => import(`./${v}.js`)))

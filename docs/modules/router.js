@@ -63,7 +63,34 @@ class Router extends EventTarget {
   }
 
   #emitRouteChangeEvent (detail) {
+    // Ensure we always have a route in the state
+    if (!detail.state?.route) {
+      const currentRoute = this.#getCurrentRoute()
+      detail = {
+        ...detail,
+        state: {
+          ...detail.state,
+          route: currentRoute
+        }
+      }
+    }
     this.dispatchEvent(new CustomEvent('routechange', { detail }))
+  }
+
+  #getCurrentRoute () {
+    const page = getQueryParam('page') || 0
+    const possibleRoutes = routesByPage[page] || ['/']
+
+    // Find the visible route on the current page
+    for (const route of possibleRoutes) {
+      const element = document.getElementById(route)
+      if (element && !element.classList.contains('invisible')) {
+        return route
+      }
+    }
+
+    // Default to first route of the page, or home
+    return possibleRoutes[0] || '/'
   }
 
   #transitionPage () {
@@ -111,6 +138,8 @@ class Router extends EventTarget {
 
     const next = toRoot ? -this.#hopsFromRoot : -1
     this.#hopsFromRoot = this.#hopsFromRoot + next
+
+    // Don't try to predict the route - let #getCurrentRoute determine it after navigation
     this.#go(next, { state })
   }
 

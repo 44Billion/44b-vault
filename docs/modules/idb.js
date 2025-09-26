@@ -21,6 +21,7 @@ function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
       /*
       {
         pubkey,
+        passkeyRawId,
         profile: {},
         relays: {},
         ts // last update

@@ -30,6 +30,16 @@ export default class NostrSigner {
   #resultsByReqId = {}
   #conversationKeys = {}
 
+  // Get the list of logged-in pubkeys
+  static get loggedInPubkeys () {
+    return Object.keys(this.#nostrSignersByPubkey)
+  }
+
+  // Check if any user is signed in
+  static get hasLoggedInUsers () {
+    return this.loggedInPubkeys.length > 0
+  }
+
   // This also caches the privkey on memory
   // to avoid asking user to unlock with passkey
   // the next time we need to sign/encrypt things

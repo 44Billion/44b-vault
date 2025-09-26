@@ -18,6 +18,16 @@ const locales = {
     pt: 'Vamos recuperar sua conta do armazenamento seguro do dispositivo e adicioná-la a esta sessão.',
     hasDomNode: true
   },
+  shortLoadAccountDescription: {
+    en: 'Access account using biometrics.',
+    pt: 'Acessar conta já armazenada',
+    hasDomNode: true
+  },
+  createNewAccountDescription: {
+    en: 'Create a brand new account',
+    pt: 'Criar uma conta novinha em folha',
+    hasDomNode: true
+  },
   loadAccountButton: { en: 'Load My Account', pt: 'Carregar Minha Conta', hasDomNode: true },
   nsecInputLabel: { en: 'Enter your private key (nsec or hex):', pt: 'Digite sua chave privada (nsec ou hex):', hasDomNode: true },
   nsecInputPlaceholder: { en: 'nsec1... or hex private key', pt: 'nsec1... ou chave privada em hex', hasDomNode: true, domAttributes: ['placeholder'] },

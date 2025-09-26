@@ -125,6 +125,14 @@ The vault operates within an iframe to create a security boundary:
 - **Automatic Light Mode** - Uses `@media (prefers-color-scheme: light)` to invert colors
 - **CSS Reset** - Custom reset for consistent cross-browser behavior
 
+### CSS Unit System
+- **CRITICAL**: The project uses a custom rem unit system via `/docs/styles/reset.css`
+- **HTML font-size**: `0.0625em` (1/16th of browser default = 1px base)
+- **Body font-size**: `16rem` (equivalent to 16px)
+- **Result**: `1rem = 1px` throughout the application
+- **Examples**: Use `24rem` for 24px, `16rem` for 16px, `14rem` for 14px
+- **Important**: Never use standard CSS assumptions about rem units - always treat `1rem = 1px`
+
 ### Icons
 - **CSS-only Icons** - No SVG for security reasons
 - **Sources**: css.gg and cssicon.space

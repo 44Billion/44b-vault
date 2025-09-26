@@ -3,6 +3,7 @@
     "avatar": "./modules/avatar.js",
     "config": "./modules/config.js",
     "handlers": "./modules/handlers/index.js",
+    "handlers/authenticator-overlay.js": "./modules/handlers/authenticator-overlay.js",
     "helpers/misc.js": "./modules/helpers/misc.js",
     "helpers/string.js": "./modules/helpers/string.js",
     "idb": "./modules/idb.js",
