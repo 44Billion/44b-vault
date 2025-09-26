@@ -55,7 +55,7 @@ async function storeAccountPrivkeyInSecureElement ({ privkey, displayName }) {
     if (v.authenticatorAttachment !== 'platform') {
       throw new Error('Another device was used')
     }
-    return v
+    return { passkeyRawId: new Uint8Array(v.rawId) }
   })
 }
 
@@ -75,7 +75,7 @@ async function getPrivkeyFromSecureElement () {
   // { rawId } is the identifier for the specific passkey being created
   // not the same as user.id (privkey) from credentials.create(), which is
   // the same as { response: { userHandle } } from credentials.get()
-  const { response: { userHandle }, authenticatorAttachment } = await navigator.credentials.get({
+  const { rawId, response: { userHandle }, authenticatorAttachment } = await navigator.credentials.get({
     publicKey: publicKeyCredentialRequestOptions
   })
   const privkey = bytesToHex(new Uint8Array(userHandle /* ArrayBuffer */))
@@ -85,17 +85,16 @@ async function getPrivkeyFromSecureElement () {
     const displayName = (await getProfile(pubkey)).name || ''
     await storeAccountPrivkeyInSecureElement({ privkey, displayName })
   }
-  return privkey
+  return { passkeyRawId: new Uint8Array(rawId), privkey }
 }
 
 // Do this to confirm a sensitive operation
-// TODO: use at signer cause privkey is a private instance prop
-async function reauthenticateWithPasskey (privkey) {
-  if (!privkey) return false
+async function reauthenticateWithPasskey (privkey, rawId) {
+  if (!privkey || !rawId) return false
 
   // we only know the current unlocked session key
   const publicKeyCredentialDescriptor = {
-    id: 'fixme', // hexToBytes(privkey), // wrong! this id is the credential's rawId, not user.id
+    id: rawId,
     type: 'public-key',
     // just locally created passkey because even when we add
     // an account from an external device's passkey, we create
@@ -109,11 +108,11 @@ async function reauthenticateWithPasskey (privkey) {
     allowCredentials: [publicKeyCredentialDescriptor],
     userVerification: 'required' // e.g: ask for OS password if no biometric/PIN support
   }
-  const { rawId } = await navigator.credentials.get({
+  const { response: { userHandle } } = await navigator.credentials.get({
     publicKey: publicKeyCredentialRequestOptions,
     mediation: 'required' // the user will always be asked to authenticate
   })
-  return privkey === bytesToHex(new Uint8Array(rawId /* ArrayBuffer */))
+  return privkey === bytesToHex(new Uint8Array(userHandle /* ArrayBuffer */))
 }
 
 // This privkey will encrypt account privkeys on idb upon locking screen
@@ -147,7 +146,7 @@ async function storeUnlockPrivkeyInSecureElement ({ privkey }) {
       // and later limit credentials to allowCredentials: [{ id, type: 'public-key' }]
       // when unlocking screen
       // because the return.rawId/return.response.userHandle of credentials.get()
-      // is the only thing returned about the user (can't access name/displayName)
+      // are the only things returned about the user (can't access name/displayName)
       residentKey: 'required', // person can select an user from a list of passkeys
       userVerification: 'discouraged' // if possible, don't ask for pin/biometric
     },

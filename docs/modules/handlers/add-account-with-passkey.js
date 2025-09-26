@@ -28,7 +28,7 @@ async function onButtonClick () {
 
   try {
     // Get private key from secure element
-    const privkey = await getPrivkeyFromSecureElement()
+    const { passkeyRawId, privkey } = await getPrivkeyFromSecureElement()
     console.log('Loaded privkey from passkey:', privkey, typeof privkey)
     const pubkey = getPublicKey(privkey)
 
@@ -42,6 +42,7 @@ async function onButtonClick () {
         // Account object similar to new-account.js
         const account = {
           pubkey,
+          passkeyRawId,
           profile: {
             name: profile.name,
             about: profile.about,
@@ -61,6 +62,7 @@ async function onButtonClick () {
         console.error('Failed to fetch profile/relays from network:', err)
         const account = {
           pubkey,
+          passkeyRawId,
           profile: {
             name: `User#${getRandomId().slice(0, 5)}`,
             about: '',

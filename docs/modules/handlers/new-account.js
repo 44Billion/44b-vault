@@ -106,8 +106,9 @@ async function createAccount (privkey) {
       console.error(errors.map(({ relay, reason }) => `${relay}: ${reason}`).join('\n'))
       throw new Error('PROFILE_EVENT_SEND_ERROR')
     }
+    let passkeyRawId
     try {
-      await storeAccountPrivkeyInSecureElement({ privkey, displayName })
+      ({ passkeyRawId } = await storeAccountPrivkeyInSecureElement({ privkey, displayName }))
     } catch (err) {
       console.error(err)
       throw new Error('SECURE_ELEMENT_STORE_ERROR')
@@ -115,6 +116,7 @@ async function createAccount (privkey) {
     try {
       await idb.createOrUpdateAccount({
         pubkey: signer.getPublicKey(),
+        passkeyRawId,
         profile: await eventToProfile(profileEvent, { _getSvgAvatar: getSvgAvatar }),
         relays: eventToRelays(relaysEvent)
       })
