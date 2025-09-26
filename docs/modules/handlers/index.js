@@ -5,6 +5,7 @@ function initHandlers () {
     'new-account',
     'add-account',
     'add-account-with-passkey',
+    'add-account-with-nsec',
     'overlays'
     // 'lock'
   ]

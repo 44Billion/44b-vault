@@ -86,6 +86,13 @@ The vault operates within an iframe to create a security boundary:
 /build/                        # Build output for dependencies
 ├── esbuild.js                # Build script
 └── nostr/                    # Built nostr-tools integration
+    ├── index.js              # Main export file
+    ├── nip01.js              # Basic Nostr protocol
+    ├── nip04.js              # Encrypted Direct Messages
+    ├── nip07.js              # Browser extension interface
+    ├── nip19.js              # Bech32-encoded identifiers (nsec, npub, etc.)
+    ├── nip44.js              # Versioned encryption
+    └── relay.js              # Relay connection handling
 
 /tests/                       # Test files
 ├── queries.test.js           # Queries module tests
@@ -122,9 +129,22 @@ The vault operates within an iframe to create a security boundary:
 - **CSS-only Icons** - No SVG for security reasons
 - **Sources**: css.gg and cssicon.space
 - **Location**: `/docs/styles/icons.css`
-- **Important**: When adding new icons to HTML, always add their CSS definitions to `/docs/styles/icons.css` from the respective icon libraries
+- **CRITICAL WORKFLOW**: When adding new icons to HTML, **ALWAYS** add their CSS definitions to `/docs/styles/icons.css` from the respective icon libraries
+  - **Step 1**: Add icon HTML class (e.g., `<i class="gg-eye"></i>`)
+  - **Step 2**: **IMMEDIATELY** add corresponding CSS from css.gg or cssicon.space to `/docs/styles/icons.css`
+  - **Step 3**: Test icon display in browser
+  - **css.gg source**: Use official definitions from https://github.com/astrit/css.gg/blob/main/icons/icons.json
+  - **cssicon.space source**: Use definitions from https://github.com/wentin/cssicon
+  - Common icons: `gg-eye` (visibility), `gg-eye-alt` (hidden), `gg-lock`, `gg-user-add`, etc.
 
 ## Development Guidelines
+
+### Adding Nostr NIP Helpers
+- **Location**: Add new NIP modules in `/build/nostr/` (e.g., `nip19.js`)
+- **Export**: Include the new module in `/build/nostr/index.js`
+- **Build**: Run `npm run build:nostr` to integrate into `/docs/modules/nostr.js`
+- **Usage**: Import functions from the `'nostr'` module in your handlers
+- **Examples**: `nip19Decode` for nsec/npub decoding, `npubEncode` for public key encoding
 
 ### Import Map Maintenance
 - **Critical**: Keep `/docs/import-map.json` updated when adding/removing JS files

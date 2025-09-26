@@ -116,7 +116,7 @@
                   <div class="icon-wrapper"><i class="gg-add-r"></i></div>
                 </button>
                 <div class="field">
-                  <label class="t-display-name"></label>
+                  <label for="new-account-display-name" class="t-display-name"></label>
                   <input id="new-account-display-name" class="t-display-name-placeholder">
                 </div>
               </div>
@@ -150,7 +150,7 @@
                 </div>
               </div>
               <div>
-                <label id="new-session-label" class="t-name-account-group"></label>
+                <label for="new-session-input" id="new-session-label" class="t-name-account-group"></label>
                 <input id="new-session-input" class="t-account-group-description" type='text' size="70">
               </div>
               <div class="action-btns">
@@ -173,6 +173,25 @@
               </div>
               <div class="action-btns">
                 <button class="load-account"><span class="t-load-account-button"></span></button>
+              </div>
+            </div>
+            <div id="/add-account-with-nsec" class="action-view invisible">
+              <div id="nsec-icon">
+                <div class="icon-wrapper">
+                  <i class="gg-password"></i>
+                </div>
+              </div>
+              <div>
+                <label for="nsec-input" id="nsec-input-label" class="t-nsec-input-label"></label>
+                <div class="password-input-wrapper">
+                  <input id="nsec-input" class="t-nsec-input-placeholder" type="password" size="70">
+                  <button id="toggle-nsec-visibility" type="button" class="password-toggle">
+                    <i class="gg-eye"></i>
+                  </button>
+                </div>
+              </div>
+              <div class="action-btns">
+                <button class="add-account-with-nsec"><span class="t-add-account-with-nsec-button"></span></button>
               </div>
             </div>
             <div id="/new-account-success" class="action-view invisible">

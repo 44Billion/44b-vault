@@ -22,6 +22,10 @@ const routes = {
     page: 2,
     stateKey: null
   },
+  '/add-account-with-nsec': {
+    page: 2,
+    stateKey: null
+  },
   '/backup-accounts': {
     page: 1,
     stateKey: null

@@ -19,6 +19,9 @@ const locales = {
     hasDomNode: true
   },
   loadAccountButton: { en: 'Load My Account', pt: 'Carregar Minha Conta', hasDomNode: true },
+  nsecInputLabel: { en: 'Enter your private key (nsec or hex):', pt: 'Digite sua chave privada (nsec ou hex):', hasDomNode: true },
+  nsecInputPlaceholder: { en: 'nsec1... or hex private key', pt: 'nsec1... ou chave privada em hex', hasDomNode: true, domAttributes: ['placeholder'] },
+  addAccountWithNsecButton: { en: 'Add Account', pt: 'Adicionar Conta', hasDomNode: true },
 
   backupKeys: { en: 'Backup Accounts', pt: 'Fazer Backup das Contas', hasDomNode: true },
   lock: { en: 'Lock Screen', pt: 'Bloquear Tela', hasDomNode: true },
@@ -48,6 +51,9 @@ const locales = {
   close: { en: 'Close', pt: 'Fechar', hasDomNode: true },
   accountLoadedSuccessfully: { en: 'Account loaded successfully', pt: 'Conta carregada com sucesso' },
   accountLoadError: { en: 'Error loading account', pt: 'Erro ao carregar conta' },
+  nsecRequired: { en: 'Private key (nsec) is required', pt: 'Chave privada (nsec) é obrigatória' },
+  invalidNsec: { en: 'Invalid private key format', pt: 'Formato de chave privada inválido' },
+  passkeyStoreFailed: { en: 'Failed to securely store private key', pt: 'Falha ao armazenar chave privada com segurança' },
   // modules/messenger.js
   reqIdTypeError: { en: 'reqId field must be a string', pt: 'Campo reqId precisa ser textual' },
   unknownMessageCodeError: { en: 'Unknown message code', pt: 'O "code" da mensagem é desconhecido' },

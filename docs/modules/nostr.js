@@ -4713,376 +4713,6 @@ var schnorr2 = /* @__PURE__ */ (() => {
 
 // nostr/nip01.js
 import { bytesToHex as bytesToHex4, hexToBytes as hexToBytes4 } from "helpers/misc.js";
-
-// ../node_modules/@scure/base/lib/esm/index.js
-function assertNumber(n) {
-  if (!Number.isSafeInteger(n))
-    throw new Error(`Wrong integer: ${n}`);
-}
-function chain(...args) {
-  const wrap = (a, b) => (c) => a(b(c));
-  const encode = Array.from(args).reverse().reduce((acc, i3) => acc ? wrap(acc, i3.encode) : i3.encode, void 0);
-  const decode = args.reduce((acc, i3) => acc ? wrap(acc, i3.decode) : i3.decode, void 0);
-  return { encode, decode };
-}
-function alphabet(alphabet2) {
-  return {
-    encode: (digits) => {
-      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-        throw new Error("alphabet.encode input should be an array of numbers");
-      return digits.map((i3) => {
-        assertNumber(i3);
-        if (i3 < 0 || i3 >= alphabet2.length)
-          throw new Error(`Digit index outside alphabet: ${i3} (alphabet: ${alphabet2.length})`);
-        return alphabet2[i3];
-      });
-    },
-    decode: (input) => {
-      if (!Array.isArray(input) || input.length && typeof input[0] !== "string")
-        throw new Error("alphabet.decode input should be array of strings");
-      return input.map((letter) => {
-        if (typeof letter !== "string")
-          throw new Error(`alphabet.decode: not string element=${letter}`);
-        const index = alphabet2.indexOf(letter);
-        if (index === -1)
-          throw new Error(`Unknown letter: "${letter}". Allowed: ${alphabet2}`);
-        return index;
-      });
-    }
-  };
-}
-function join(separator = "") {
-  if (typeof separator !== "string")
-    throw new Error("join separator should be string");
-  return {
-    encode: (from) => {
-      if (!Array.isArray(from) || from.length && typeof from[0] !== "string")
-        throw new Error("join.encode input should be array of strings");
-      for (let i3 of from)
-        if (typeof i3 !== "string")
-          throw new Error(`join.encode: non-string input=${i3}`);
-      return from.join(separator);
-    },
-    decode: (to) => {
-      if (typeof to !== "string")
-        throw new Error("join.decode input should be string");
-      return to.split(separator);
-    }
-  };
-}
-function padding(bits, chr = "=") {
-  assertNumber(bits);
-  if (typeof chr !== "string")
-    throw new Error("padding chr should be string");
-  return {
-    encode(data) {
-      if (!Array.isArray(data) || data.length && typeof data[0] !== "string")
-        throw new Error("padding.encode input should be array of strings");
-      for (let i3 of data)
-        if (typeof i3 !== "string")
-          throw new Error(`padding.encode: non-string input=${i3}`);
-      while (data.length * bits % 8)
-        data.push(chr);
-      return data;
-    },
-    decode(input) {
-      if (!Array.isArray(input) || input.length && typeof input[0] !== "string")
-        throw new Error("padding.encode input should be array of strings");
-      for (let i3 of input)
-        if (typeof i3 !== "string")
-          throw new Error(`padding.decode: non-string input=${i3}`);
-      let end = input.length;
-      if (end * bits % 8)
-        throw new Error("Invalid padding: string should have whole number of bytes");
-      for (; end > 0 && input[end - 1] === chr; end--) {
-        if (!((end - 1) * bits % 8))
-          throw new Error("Invalid padding: string has too much padding");
-      }
-      return input.slice(0, end);
-    }
-  };
-}
-function normalize(fn) {
-  if (typeof fn !== "function")
-    throw new Error("normalize fn should be function");
-  return { encode: (from) => from, decode: (to) => fn(to) };
-}
-function convertRadix(data, from, to) {
-  if (from < 2)
-    throw new Error(`convertRadix: wrong from=${from}, base cannot be less than 2`);
-  if (to < 2)
-    throw new Error(`convertRadix: wrong to=${to}, base cannot be less than 2`);
-  if (!Array.isArray(data))
-    throw new Error("convertRadix: data should be array");
-  if (!data.length)
-    return [];
-  let pos = 0;
-  const res = [];
-  const digits = Array.from(data);
-  digits.forEach((d) => {
-    assertNumber(d);
-    if (d < 0 || d >= from)
-      throw new Error(`Wrong integer: ${d}`);
-  });
-  while (true) {
-    let carry = 0;
-    let done = true;
-    for (let i3 = pos; i3 < digits.length; i3++) {
-      const digit = digits[i3];
-      const digitBase = from * carry + digit;
-      if (!Number.isSafeInteger(digitBase) || from * carry / from !== carry || digitBase - digit !== from * carry) {
-        throw new Error("convertRadix: carry overflow");
-      }
-      carry = digitBase % to;
-      digits[i3] = Math.floor(digitBase / to);
-      if (!Number.isSafeInteger(digits[i3]) || digits[i3] * to + carry !== digitBase)
-        throw new Error("convertRadix: carry overflow");
-      if (!done)
-        continue;
-      else if (!digits[i3])
-        pos = i3;
-      else
-        done = false;
-    }
-    res.push(carry);
-    if (done)
-      break;
-  }
-  for (let i3 = 0; i3 < data.length - 1 && data[i3] === 0; i3++)
-    res.push(0);
-  return res.reverse();
-}
-var gcd = (a, b) => !b ? a : gcd(b, a % b);
-var radix2carry = (from, to) => from + (to - gcd(from, to));
-function convertRadix2(data, from, to, padding2) {
-  if (!Array.isArray(data))
-    throw new Error("convertRadix2: data should be array");
-  if (from <= 0 || from > 32)
-    throw new Error(`convertRadix2: wrong from=${from}`);
-  if (to <= 0 || to > 32)
-    throw new Error(`convertRadix2: wrong to=${to}`);
-  if (radix2carry(from, to) > 32) {
-    throw new Error(`convertRadix2: carry overflow from=${from} to=${to} carryBits=${radix2carry(from, to)}`);
-  }
-  let carry = 0;
-  let pos = 0;
-  const mask = 2 ** to - 1;
-  const res = [];
-  for (const n of data) {
-    assertNumber(n);
-    if (n >= 2 ** from)
-      throw new Error(`convertRadix2: invalid data word=${n} from=${from}`);
-    carry = carry << from | n;
-    if (pos + from > 32)
-      throw new Error(`convertRadix2: carry overflow pos=${pos} from=${from}`);
-    pos += from;
-    for (; pos >= to; pos -= to)
-      res.push((carry >> pos - to & mask) >>> 0);
-    carry &= 2 ** pos - 1;
-  }
-  carry = carry << to - pos & mask;
-  if (!padding2 && pos >= from)
-    throw new Error("Excess padding");
-  if (!padding2 && carry)
-    throw new Error(`Non-zero padding: ${carry}`);
-  if (padding2 && pos > 0)
-    res.push(carry >>> 0);
-  return res;
-}
-function radix(num2) {
-  assertNumber(num2);
-  return {
-    encode: (bytes4) => {
-      if (!(bytes4 instanceof Uint8Array))
-        throw new Error("radix.encode input should be Uint8Array");
-      return convertRadix(Array.from(bytes4), 2 ** 8, num2);
-    },
-    decode: (digits) => {
-      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-        throw new Error("radix.decode input should be array of strings");
-      return Uint8Array.from(convertRadix(digits, num2, 2 ** 8));
-    }
-  };
-}
-function radix2(bits, revPadding = false) {
-  assertNumber(bits);
-  if (bits <= 0 || bits > 32)
-    throw new Error("radix2: bits should be in (0..32]");
-  if (radix2carry(8, bits) > 32 || radix2carry(bits, 8) > 32)
-    throw new Error("radix2: carry overflow");
-  return {
-    encode: (bytes4) => {
-      if (!(bytes4 instanceof Uint8Array))
-        throw new Error("radix2.encode input should be Uint8Array");
-      return convertRadix2(Array.from(bytes4), 8, bits, !revPadding);
-    },
-    decode: (digits) => {
-      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
-        throw new Error("radix2.decode input should be array of strings");
-      return Uint8Array.from(convertRadix2(digits, bits, 8, revPadding));
-    }
-  };
-}
-function unsafeWrapper(fn) {
-  if (typeof fn !== "function")
-    throw new Error("unsafeWrapper fn should be function");
-  return function(...args) {
-    try {
-      return fn.apply(null, args);
-    } catch (e) {
-    }
-  };
-}
-var base16 = chain(radix2(4), alphabet("0123456789ABCDEF"), join(""));
-var base32 = chain(radix2(5), alphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"), padding(5), join(""));
-var base32hex = chain(radix2(5), alphabet("0123456789ABCDEFGHIJKLMNOPQRSTUV"), padding(5), join(""));
-var base32crockford = chain(radix2(5), alphabet("0123456789ABCDEFGHJKMNPQRSTVWXYZ"), join(""), normalize((s) => s.toUpperCase().replace(/O/g, "0").replace(/[IL]/g, "1")));
-var base64 = chain(radix2(6), alphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"), padding(6), join(""));
-var base64url = chain(radix2(6), alphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"), padding(6), join(""));
-var genBase58 = (abc) => chain(radix(58), alphabet(abc), join(""));
-var base58 = genBase58("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
-var base58flickr = genBase58("123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ");
-var base58xrp = genBase58("rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz");
-var XMR_BLOCK_LEN = [0, 2, 3, 5, 6, 7, 9, 10, 11];
-var base58xmr = {
-  encode(data) {
-    let res = "";
-    for (let i3 = 0; i3 < data.length; i3 += 8) {
-      const block = data.subarray(i3, i3 + 8);
-      res += base58.encode(block).padStart(XMR_BLOCK_LEN[block.length], "1");
-    }
-    return res;
-  },
-  decode(str) {
-    let res = [];
-    for (let i3 = 0; i3 < str.length; i3 += 11) {
-      const slice = str.slice(i3, i3 + 11);
-      const blockLen = XMR_BLOCK_LEN.indexOf(slice.length);
-      const block = base58.decode(slice);
-      for (let j = 0; j < block.length - blockLen; j++) {
-        if (block[j] !== 0)
-          throw new Error("base58xmr: wrong padding");
-      }
-      res = res.concat(Array.from(block.slice(block.length - blockLen)));
-    }
-    return Uint8Array.from(res);
-  }
-};
-var BECH_ALPHABET = chain(alphabet("qpzry9x8gf2tvdw0s3jn54khce6mua7l"), join(""));
-var POLYMOD_GENERATORS = [996825010, 642813549, 513874426, 1027748829, 705979059];
-function bech32Polymod(pre) {
-  const b = pre >> 25;
-  let chk = (pre & 33554431) << 5;
-  for (let i3 = 0; i3 < POLYMOD_GENERATORS.length; i3++) {
-    if ((b >> i3 & 1) === 1)
-      chk ^= POLYMOD_GENERATORS[i3];
-  }
-  return chk;
-}
-function bechChecksum(prefix, words, encodingConst = 1) {
-  const len = prefix.length;
-  let chk = 1;
-  for (let i3 = 0; i3 < len; i3++) {
-    const c = prefix.charCodeAt(i3);
-    if (c < 33 || c > 126)
-      throw new Error(`Invalid prefix (${prefix})`);
-    chk = bech32Polymod(chk) ^ c >> 5;
-  }
-  chk = bech32Polymod(chk);
-  for (let i3 = 0; i3 < len; i3++)
-    chk = bech32Polymod(chk) ^ prefix.charCodeAt(i3) & 31;
-  for (let v of words)
-    chk = bech32Polymod(chk) ^ v;
-  for (let i3 = 0; i3 < 6; i3++)
-    chk = bech32Polymod(chk);
-  chk ^= encodingConst;
-  return BECH_ALPHABET.encode(convertRadix2([chk % 2 ** 30], 30, 5, false));
-}
-function genBech32(encoding) {
-  const ENCODING_CONST = encoding === "bech32" ? 1 : 734539939;
-  const _words = radix2(5);
-  const fromWords = _words.decode;
-  const toWords = _words.encode;
-  const fromWordsUnsafe = unsafeWrapper(fromWords);
-  function encode(prefix, words, limit2 = 90) {
-    if (typeof prefix !== "string")
-      throw new Error(`bech32.encode prefix should be string, not ${typeof prefix}`);
-    if (!Array.isArray(words) || words.length && typeof words[0] !== "number")
-      throw new Error(`bech32.encode words should be array of numbers, not ${typeof words}`);
-    const actualLength = prefix.length + 7 + words.length;
-    if (limit2 !== false && actualLength > limit2)
-      throw new TypeError(`Length ${actualLength} exceeds limit ${limit2}`);
-    prefix = prefix.toLowerCase();
-    return `${prefix}1${BECH_ALPHABET.encode(words)}${bechChecksum(prefix, words, ENCODING_CONST)}`;
-  }
-  function decode(str, limit2 = 90) {
-    if (typeof str !== "string")
-      throw new Error(`bech32.decode input should be string, not ${typeof str}`);
-    if (str.length < 8 || limit2 !== false && str.length > limit2)
-      throw new TypeError(`Wrong string length: ${str.length} (${str}). Expected (8..${limit2})`);
-    const lowered = str.toLowerCase();
-    if (str !== lowered && str !== str.toUpperCase())
-      throw new Error(`String must be lowercase or uppercase`);
-    str = lowered;
-    const sepIndex = str.lastIndexOf("1");
-    if (sepIndex === 0 || sepIndex === -1)
-      throw new Error(`Letter "1" must be present between prefix and data only`);
-    const prefix = str.slice(0, sepIndex);
-    const _words2 = str.slice(sepIndex + 1);
-    if (_words2.length < 6)
-      throw new Error("Data must be at least 6 characters long");
-    const words = BECH_ALPHABET.decode(_words2).slice(0, -6);
-    const sum = bechChecksum(prefix, words, ENCODING_CONST);
-    if (!_words2.endsWith(sum))
-      throw new Error(`Invalid checksum in ${str}: expected "${sum}"`);
-    return { prefix, words };
-  }
-  const decodeUnsafe = unsafeWrapper(decode);
-  function decodeToBytes(str) {
-    const { prefix, words } = decode(str, false);
-    return { prefix, words, bytes: fromWords(words) };
-  }
-  return { encode, decode, decodeToBytes, decodeUnsafe, fromWords, fromWordsUnsafe, toWords };
-}
-var bech32 = genBech32("bech32");
-var bech32m = genBech32("bech32m");
-var utf8 = {
-  encode: (data) => new TextDecoder().decode(data),
-  decode: (str) => new TextEncoder().encode(str)
-};
-var hex = chain(radix2(4), alphabet("0123456789abcdef"), join(""), normalize((s) => {
-  if (typeof s !== "string" || s.length % 2)
-    throw new TypeError(`hex.decode: expected string, got ${typeof s} with length ${s.length}`);
-  return s.toLowerCase();
-}));
-var CODERS = {
-  utf8,
-  hex,
-  base16,
-  base32,
-  base64,
-  base64url,
-  base58,
-  base58xmr
-};
-var coderTypeError = `Invalid encoding type. Available types: ${Object.keys(CODERS).join(", ")}`;
-
-// ../node_modules/nostr-tools/lib/esm/nip19.js
-var utf8Decoder2 = new TextDecoder("utf-8");
-var utf8Encoder2 = new TextEncoder();
-var Bech32MaxSize = 5e3;
-function npubEncode(hex2) {
-  return encodeBytes("npub", hexToBytes2(hex2));
-}
-function encodeBech32(prefix, data) {
-  let words = bech32.toWords(data);
-  return bech32.encode(prefix, words, Bech32MaxSize);
-}
-function encodeBytes(prefix, bytes4) {
-  return encodeBech32(prefix, bytes4);
-}
-
-// nostr/nip01.js
 function generatePrivateKey() {
   const randomBytes4 = crypto.getRandomValues(new Uint8Array(40));
   const B256 = 2n ** 256n;
@@ -5946,15 +5576,368 @@ var siv = wrapCipher({ blockSize: 16, nonceLength: 12, tagLength: 16 }, function
   };
 });
 
+// ../node_modules/@scure/base/lib/esm/index.js
+function assertNumber(n) {
+  if (!Number.isSafeInteger(n))
+    throw new Error(`Wrong integer: ${n}`);
+}
+function chain(...args) {
+  const wrap = (a, b) => (c) => a(b(c));
+  const encode = Array.from(args).reverse().reduce((acc, i3) => acc ? wrap(acc, i3.encode) : i3.encode, void 0);
+  const decode2 = args.reduce((acc, i3) => acc ? wrap(acc, i3.decode) : i3.decode, void 0);
+  return { encode, decode: decode2 };
+}
+function alphabet(alphabet2) {
+  return {
+    encode: (digits) => {
+      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
+        throw new Error("alphabet.encode input should be an array of numbers");
+      return digits.map((i3) => {
+        assertNumber(i3);
+        if (i3 < 0 || i3 >= alphabet2.length)
+          throw new Error(`Digit index outside alphabet: ${i3} (alphabet: ${alphabet2.length})`);
+        return alphabet2[i3];
+      });
+    },
+    decode: (input) => {
+      if (!Array.isArray(input) || input.length && typeof input[0] !== "string")
+        throw new Error("alphabet.decode input should be array of strings");
+      return input.map((letter) => {
+        if (typeof letter !== "string")
+          throw new Error(`alphabet.decode: not string element=${letter}`);
+        const index = alphabet2.indexOf(letter);
+        if (index === -1)
+          throw new Error(`Unknown letter: "${letter}". Allowed: ${alphabet2}`);
+        return index;
+      });
+    }
+  };
+}
+function join(separator = "") {
+  if (typeof separator !== "string")
+    throw new Error("join separator should be string");
+  return {
+    encode: (from) => {
+      if (!Array.isArray(from) || from.length && typeof from[0] !== "string")
+        throw new Error("join.encode input should be array of strings");
+      for (let i3 of from)
+        if (typeof i3 !== "string")
+          throw new Error(`join.encode: non-string input=${i3}`);
+      return from.join(separator);
+    },
+    decode: (to) => {
+      if (typeof to !== "string")
+        throw new Error("join.decode input should be string");
+      return to.split(separator);
+    }
+  };
+}
+function padding(bits, chr = "=") {
+  assertNumber(bits);
+  if (typeof chr !== "string")
+    throw new Error("padding chr should be string");
+  return {
+    encode(data) {
+      if (!Array.isArray(data) || data.length && typeof data[0] !== "string")
+        throw new Error("padding.encode input should be array of strings");
+      for (let i3 of data)
+        if (typeof i3 !== "string")
+          throw new Error(`padding.encode: non-string input=${i3}`);
+      while (data.length * bits % 8)
+        data.push(chr);
+      return data;
+    },
+    decode(input) {
+      if (!Array.isArray(input) || input.length && typeof input[0] !== "string")
+        throw new Error("padding.encode input should be array of strings");
+      for (let i3 of input)
+        if (typeof i3 !== "string")
+          throw new Error(`padding.decode: non-string input=${i3}`);
+      let end = input.length;
+      if (end * bits % 8)
+        throw new Error("Invalid padding: string should have whole number of bytes");
+      for (; end > 0 && input[end - 1] === chr; end--) {
+        if (!((end - 1) * bits % 8))
+          throw new Error("Invalid padding: string has too much padding");
+      }
+      return input.slice(0, end);
+    }
+  };
+}
+function normalize(fn) {
+  if (typeof fn !== "function")
+    throw new Error("normalize fn should be function");
+  return { encode: (from) => from, decode: (to) => fn(to) };
+}
+function convertRadix(data, from, to) {
+  if (from < 2)
+    throw new Error(`convertRadix: wrong from=${from}, base cannot be less than 2`);
+  if (to < 2)
+    throw new Error(`convertRadix: wrong to=${to}, base cannot be less than 2`);
+  if (!Array.isArray(data))
+    throw new Error("convertRadix: data should be array");
+  if (!data.length)
+    return [];
+  let pos = 0;
+  const res = [];
+  const digits = Array.from(data);
+  digits.forEach((d) => {
+    assertNumber(d);
+    if (d < 0 || d >= from)
+      throw new Error(`Wrong integer: ${d}`);
+  });
+  while (true) {
+    let carry = 0;
+    let done = true;
+    for (let i3 = pos; i3 < digits.length; i3++) {
+      const digit = digits[i3];
+      const digitBase = from * carry + digit;
+      if (!Number.isSafeInteger(digitBase) || from * carry / from !== carry || digitBase - digit !== from * carry) {
+        throw new Error("convertRadix: carry overflow");
+      }
+      carry = digitBase % to;
+      digits[i3] = Math.floor(digitBase / to);
+      if (!Number.isSafeInteger(digits[i3]) || digits[i3] * to + carry !== digitBase)
+        throw new Error("convertRadix: carry overflow");
+      if (!done)
+        continue;
+      else if (!digits[i3])
+        pos = i3;
+      else
+        done = false;
+    }
+    res.push(carry);
+    if (done)
+      break;
+  }
+  for (let i3 = 0; i3 < data.length - 1 && data[i3] === 0; i3++)
+    res.push(0);
+  return res.reverse();
+}
+var gcd = (a, b) => !b ? a : gcd(b, a % b);
+var radix2carry = (from, to) => from + (to - gcd(from, to));
+function convertRadix2(data, from, to, padding2) {
+  if (!Array.isArray(data))
+    throw new Error("convertRadix2: data should be array");
+  if (from <= 0 || from > 32)
+    throw new Error(`convertRadix2: wrong from=${from}`);
+  if (to <= 0 || to > 32)
+    throw new Error(`convertRadix2: wrong to=${to}`);
+  if (radix2carry(from, to) > 32) {
+    throw new Error(`convertRadix2: carry overflow from=${from} to=${to} carryBits=${radix2carry(from, to)}`);
+  }
+  let carry = 0;
+  let pos = 0;
+  const mask = 2 ** to - 1;
+  const res = [];
+  for (const n of data) {
+    assertNumber(n);
+    if (n >= 2 ** from)
+      throw new Error(`convertRadix2: invalid data word=${n} from=${from}`);
+    carry = carry << from | n;
+    if (pos + from > 32)
+      throw new Error(`convertRadix2: carry overflow pos=${pos} from=${from}`);
+    pos += from;
+    for (; pos >= to; pos -= to)
+      res.push((carry >> pos - to & mask) >>> 0);
+    carry &= 2 ** pos - 1;
+  }
+  carry = carry << to - pos & mask;
+  if (!padding2 && pos >= from)
+    throw new Error("Excess padding");
+  if (!padding2 && carry)
+    throw new Error(`Non-zero padding: ${carry}`);
+  if (padding2 && pos > 0)
+    res.push(carry >>> 0);
+  return res;
+}
+function radix(num2) {
+  assertNumber(num2);
+  return {
+    encode: (bytes4) => {
+      if (!(bytes4 instanceof Uint8Array))
+        throw new Error("radix.encode input should be Uint8Array");
+      return convertRadix(Array.from(bytes4), 2 ** 8, num2);
+    },
+    decode: (digits) => {
+      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
+        throw new Error("radix.decode input should be array of strings");
+      return Uint8Array.from(convertRadix(digits, num2, 2 ** 8));
+    }
+  };
+}
+function radix2(bits, revPadding = false) {
+  assertNumber(bits);
+  if (bits <= 0 || bits > 32)
+    throw new Error("radix2: bits should be in (0..32]");
+  if (radix2carry(8, bits) > 32 || radix2carry(bits, 8) > 32)
+    throw new Error("radix2: carry overflow");
+  return {
+    encode: (bytes4) => {
+      if (!(bytes4 instanceof Uint8Array))
+        throw new Error("radix2.encode input should be Uint8Array");
+      return convertRadix2(Array.from(bytes4), 8, bits, !revPadding);
+    },
+    decode: (digits) => {
+      if (!Array.isArray(digits) || digits.length && typeof digits[0] !== "number")
+        throw new Error("radix2.decode input should be array of strings");
+      return Uint8Array.from(convertRadix2(digits, bits, 8, revPadding));
+    }
+  };
+}
+function unsafeWrapper(fn) {
+  if (typeof fn !== "function")
+    throw new Error("unsafeWrapper fn should be function");
+  return function(...args) {
+    try {
+      return fn.apply(null, args);
+    } catch (e) {
+    }
+  };
+}
+var base16 = chain(radix2(4), alphabet("0123456789ABCDEF"), join(""));
+var base32 = chain(radix2(5), alphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZ234567"), padding(5), join(""));
+var base32hex = chain(radix2(5), alphabet("0123456789ABCDEFGHIJKLMNOPQRSTUV"), padding(5), join(""));
+var base32crockford = chain(radix2(5), alphabet("0123456789ABCDEFGHJKMNPQRSTVWXYZ"), join(""), normalize((s) => s.toUpperCase().replace(/O/g, "0").replace(/[IL]/g, "1")));
+var base64 = chain(radix2(6), alphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/"), padding(6), join(""));
+var base64url = chain(radix2(6), alphabet("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_"), padding(6), join(""));
+var genBase58 = (abc) => chain(radix(58), alphabet(abc), join(""));
+var base58 = genBase58("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz");
+var base58flickr = genBase58("123456789abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ");
+var base58xrp = genBase58("rpshnaf39wBUDNEGHJKLM4PQRST7VWXYZ2bcdeCg65jkm8oFqi1tuvAxyz");
+var XMR_BLOCK_LEN = [0, 2, 3, 5, 6, 7, 9, 10, 11];
+var base58xmr = {
+  encode(data) {
+    let res = "";
+    for (let i3 = 0; i3 < data.length; i3 += 8) {
+      const block = data.subarray(i3, i3 + 8);
+      res += base58.encode(block).padStart(XMR_BLOCK_LEN[block.length], "1");
+    }
+    return res;
+  },
+  decode(str) {
+    let res = [];
+    for (let i3 = 0; i3 < str.length; i3 += 11) {
+      const slice = str.slice(i3, i3 + 11);
+      const blockLen = XMR_BLOCK_LEN.indexOf(slice.length);
+      const block = base58.decode(slice);
+      for (let j = 0; j < block.length - blockLen; j++) {
+        if (block[j] !== 0)
+          throw new Error("base58xmr: wrong padding");
+      }
+      res = res.concat(Array.from(block.slice(block.length - blockLen)));
+    }
+    return Uint8Array.from(res);
+  }
+};
+var BECH_ALPHABET = chain(alphabet("qpzry9x8gf2tvdw0s3jn54khce6mua7l"), join(""));
+var POLYMOD_GENERATORS = [996825010, 642813549, 513874426, 1027748829, 705979059];
+function bech32Polymod(pre) {
+  const b = pre >> 25;
+  let chk = (pre & 33554431) << 5;
+  for (let i3 = 0; i3 < POLYMOD_GENERATORS.length; i3++) {
+    if ((b >> i3 & 1) === 1)
+      chk ^= POLYMOD_GENERATORS[i3];
+  }
+  return chk;
+}
+function bechChecksum(prefix, words, encodingConst = 1) {
+  const len = prefix.length;
+  let chk = 1;
+  for (let i3 = 0; i3 < len; i3++) {
+    const c = prefix.charCodeAt(i3);
+    if (c < 33 || c > 126)
+      throw new Error(`Invalid prefix (${prefix})`);
+    chk = bech32Polymod(chk) ^ c >> 5;
+  }
+  chk = bech32Polymod(chk);
+  for (let i3 = 0; i3 < len; i3++)
+    chk = bech32Polymod(chk) ^ prefix.charCodeAt(i3) & 31;
+  for (let v of words)
+    chk = bech32Polymod(chk) ^ v;
+  for (let i3 = 0; i3 < 6; i3++)
+    chk = bech32Polymod(chk);
+  chk ^= encodingConst;
+  return BECH_ALPHABET.encode(convertRadix2([chk % 2 ** 30], 30, 5, false));
+}
+function genBech32(encoding) {
+  const ENCODING_CONST = encoding === "bech32" ? 1 : 734539939;
+  const _words = radix2(5);
+  const fromWords = _words.decode;
+  const toWords = _words.encode;
+  const fromWordsUnsafe = unsafeWrapper(fromWords);
+  function encode(prefix, words, limit2 = 90) {
+    if (typeof prefix !== "string")
+      throw new Error(`bech32.encode prefix should be string, not ${typeof prefix}`);
+    if (!Array.isArray(words) || words.length && typeof words[0] !== "number")
+      throw new Error(`bech32.encode words should be array of numbers, not ${typeof words}`);
+    const actualLength = prefix.length + 7 + words.length;
+    if (limit2 !== false && actualLength > limit2)
+      throw new TypeError(`Length ${actualLength} exceeds limit ${limit2}`);
+    prefix = prefix.toLowerCase();
+    return `${prefix}1${BECH_ALPHABET.encode(words)}${bechChecksum(prefix, words, ENCODING_CONST)}`;
+  }
+  function decode2(str, limit2 = 90) {
+    if (typeof str !== "string")
+      throw new Error(`bech32.decode input should be string, not ${typeof str}`);
+    if (str.length < 8 || limit2 !== false && str.length > limit2)
+      throw new TypeError(`Wrong string length: ${str.length} (${str}). Expected (8..${limit2})`);
+    const lowered = str.toLowerCase();
+    if (str !== lowered && str !== str.toUpperCase())
+      throw new Error(`String must be lowercase or uppercase`);
+    str = lowered;
+    const sepIndex = str.lastIndexOf("1");
+    if (sepIndex === 0 || sepIndex === -1)
+      throw new Error(`Letter "1" must be present between prefix and data only`);
+    const prefix = str.slice(0, sepIndex);
+    const _words2 = str.slice(sepIndex + 1);
+    if (_words2.length < 6)
+      throw new Error("Data must be at least 6 characters long");
+    const words = BECH_ALPHABET.decode(_words2).slice(0, -6);
+    const sum = bechChecksum(prefix, words, ENCODING_CONST);
+    if (!_words2.endsWith(sum))
+      throw new Error(`Invalid checksum in ${str}: expected "${sum}"`);
+    return { prefix, words };
+  }
+  const decodeUnsafe = unsafeWrapper(decode2);
+  function decodeToBytes(str) {
+    const { prefix, words } = decode2(str, false);
+    return { prefix, words, bytes: fromWords(words) };
+  }
+  return { encode, decode: decode2, decodeToBytes, decodeUnsafe, fromWords, fromWordsUnsafe, toWords };
+}
+var bech32 = genBech32("bech32");
+var bech32m = genBech32("bech32m");
+var utf8 = {
+  encode: (data) => new TextDecoder().decode(data),
+  decode: (str) => new TextEncoder().encode(str)
+};
+var hex = chain(radix2(4), alphabet("0123456789abcdef"), join(""), normalize((s) => {
+  if (typeof s !== "string" || s.length % 2)
+    throw new TypeError(`hex.decode: expected string, got ${typeof s} with length ${s.length}`);
+  return s.toLowerCase();
+}));
+var CODERS = {
+  utf8,
+  hex,
+  base16,
+  base32,
+  base64,
+  base64url,
+  base58,
+  base58xmr
+};
+var coderTypeError = `Invalid encoding type. Available types: ${Object.keys(CODERS).join(", ")}`;
+
 // ../node_modules/nostr-tools/lib/esm/nip04.js
-var utf8Decoder3 = new TextDecoder("utf-8");
-var utf8Encoder3 = new TextEncoder();
+var utf8Decoder2 = new TextDecoder("utf-8");
+var utf8Encoder2 = new TextEncoder();
 function encrypt2(secretKey, pubkey, text) {
   const privkey = secretKey instanceof Uint8Array ? bytesToHex2(secretKey) : secretKey;
   const key = secp256k1.getSharedSecret(privkey, "02" + pubkey);
   const normalizedKey = getNormalizedX(key);
   let iv = Uint8Array.from(randomBytes2(16));
-  let plaintext = utf8Encoder3.encode(text);
+  let plaintext = utf8Encoder2.encode(text);
   let ciphertext = cbc(normalizedKey, iv).encrypt(plaintext);
   let ctb64 = base64.encode(new Uint8Array(ciphertext));
   let ivb64 = base64.encode(new Uint8Array(iv.buffer));
@@ -5968,7 +5951,7 @@ function decrypt2(secretKey, pubkey, data) {
   let iv = base64.decode(ivb64);
   let ciphertext = base64.decode(ctb64);
   let plaintext = cbc(normalizedKey, iv).decrypt(ciphertext);
-  return utf8Decoder3.decode(plaintext);
+  return utf8Decoder2.decode(plaintext);
 }
 function getNormalizedX(key) {
   return key.slice(1, 33);
@@ -6698,8 +6681,8 @@ function expand(hash3, prk, info, length = 32) {
 }
 
 // ../node_modules/nostr-tools/lib/esm/nip44.js
-var utf8Decoder4 = new TextDecoder("utf-8");
-var utf8Encoder4 = new TextEncoder();
+var utf8Decoder3 = new TextDecoder("utf-8");
+var utf8Encoder3 = new TextEncoder();
 var minPlaintextSize = 1;
 var maxPlaintextSize = 65535;
 function getConversationKey(privkeyA, pubkeyB) {
@@ -6731,7 +6714,7 @@ function writeU16BE(num2) {
   return arr;
 }
 function pad(plaintext) {
-  const unpadded = utf8Encoder4.encode(plaintext);
+  const unpadded = utf8Encoder3.encode(plaintext);
   const unpaddedLen = unpadded.length;
   const prefix = writeU16BE(unpaddedLen);
   const suffix = new Uint8Array(calcPaddedLen(unpaddedLen) - unpaddedLen);
@@ -6742,7 +6725,7 @@ function unpad(padded) {
   const unpadded = padded.subarray(2, 2 + unpaddedLen);
   if (unpaddedLen < minPlaintextSize || unpaddedLen > maxPlaintextSize || unpadded.length !== unpaddedLen || padded.length !== 2 + calcPaddedLen(unpaddedLen))
     throw new Error("invalid padding");
-  return utf8Decoder4.decode(unpadded);
+  return utf8Decoder3.decode(unpadded);
 }
 function hmacAad(key, message, aad) {
   if (aad.length !== 32)
@@ -6813,6 +6796,106 @@ var nip44 = {
   decrypt: v2.decrypt,
   getConversationKey: getConversationKey2
 };
+
+// ../node_modules/nostr-tools/lib/esm/nip19.js
+var utf8Decoder4 = new TextDecoder("utf-8");
+var utf8Encoder4 = new TextEncoder();
+var Bech32MaxSize = 5e3;
+function decode(code) {
+  var _a, _b, _c, _d, _e, _f, _g;
+  let { prefix, words } = bech32.decode(code, Bech32MaxSize);
+  let data = new Uint8Array(bech32.fromWords(words));
+  switch (prefix) {
+    case "nprofile": {
+      let tlv = parseTLV(data);
+      if (!((_a = tlv[0]) == null ? void 0 : _a[0]))
+        throw new Error("missing TLV 0 for nprofile");
+      if (tlv[0][0].length !== 32)
+        throw new Error("TLV 0 should be 32 bytes");
+      return {
+        type: "nprofile",
+        data: {
+          pubkey: bytesToHex2(tlv[0][0]),
+          relays: tlv[1] ? tlv[1].map((d) => utf8Decoder4.decode(d)) : []
+        }
+      };
+    }
+    case "nevent": {
+      let tlv = parseTLV(data);
+      if (!((_b = tlv[0]) == null ? void 0 : _b[0]))
+        throw new Error("missing TLV 0 for nevent");
+      if (tlv[0][0].length !== 32)
+        throw new Error("TLV 0 should be 32 bytes");
+      if (tlv[2] && tlv[2][0].length !== 32)
+        throw new Error("TLV 2 should be 32 bytes");
+      if (tlv[3] && tlv[3][0].length !== 4)
+        throw new Error("TLV 3 should be 4 bytes");
+      return {
+        type: "nevent",
+        data: {
+          id: bytesToHex2(tlv[0][0]),
+          relays: tlv[1] ? tlv[1].map((d) => utf8Decoder4.decode(d)) : [],
+          author: ((_c = tlv[2]) == null ? void 0 : _c[0]) ? bytesToHex2(tlv[2][0]) : void 0,
+          kind: ((_d = tlv[3]) == null ? void 0 : _d[0]) ? parseInt(bytesToHex2(tlv[3][0]), 16) : void 0
+        }
+      };
+    }
+    case "naddr": {
+      let tlv = parseTLV(data);
+      if (!((_e = tlv[0]) == null ? void 0 : _e[0]))
+        throw new Error("missing TLV 0 for naddr");
+      if (!((_f = tlv[2]) == null ? void 0 : _f[0]))
+        throw new Error("missing TLV 2 for naddr");
+      if (tlv[2][0].length !== 32)
+        throw new Error("TLV 2 should be 32 bytes");
+      if (!((_g = tlv[3]) == null ? void 0 : _g[0]))
+        throw new Error("missing TLV 3 for naddr");
+      if (tlv[3][0].length !== 4)
+        throw new Error("TLV 3 should be 4 bytes");
+      return {
+        type: "naddr",
+        data: {
+          identifier: utf8Decoder4.decode(tlv[0][0]),
+          pubkey: bytesToHex2(tlv[2][0]),
+          kind: parseInt(bytesToHex2(tlv[3][0]), 16),
+          relays: tlv[1] ? tlv[1].map((d) => utf8Decoder4.decode(d)) : []
+        }
+      };
+    }
+    case "nsec":
+      return { type: prefix, data };
+    case "npub":
+    case "note":
+      return { type: prefix, data: bytesToHex2(data) };
+    default:
+      throw new Error(`unknown prefix ${prefix}`);
+  }
+}
+function parseTLV(data) {
+  let result = {};
+  let rest = data;
+  while (rest.length > 0) {
+    let t = rest[0];
+    let l = rest[1];
+    let v = rest.slice(2, 2 + l);
+    rest = rest.slice(2 + l);
+    if (v.length < l)
+      throw new Error(`not enough data to read on TLV ${t}`);
+    result[t] = result[t] || [];
+    result[t].push(v);
+  }
+  return result;
+}
+function npubEncode(hex2) {
+  return encodeBytes("npub", hexToBytes2(hex2));
+}
+function encodeBech32(prefix, data) {
+  let words = bech32.toWords(data);
+  return bech32.encode(prefix, words, Bech32MaxSize);
+}
+function encodeBytes(prefix, bytes4) {
+  return encodeBech32(prefix, bytes4);
+}
 
 // ../node_modules/nostr-tools/lib/esm/relay.js
 var verifiedSymbol2 = Symbol("verified");
@@ -7429,6 +7512,7 @@ export {
   generatePrivateKey,
   getPublicKey2 as getPublicKey,
   nip04_exports as nip04,
+  decode as nip19Decode,
   nip44,
   npubEncode,
   obfuscate
@@ -7453,9 +7537,9 @@ export {
 @noble/curves/secp256k1.js:
   (*! noble-curves - MIT License (c) 2022 Paul Miller (paulmillr.com) *)
 
-@scure/base/lib/esm/index.js:
-  (*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) *)
-
 @noble/ciphers/esm/utils.js:
   (*! noble-ciphers - MIT License (c) 2023 Paul Miller (paulmillr.com) *)
+
+@scure/base/lib/esm/index.js:
+  (*! scure-base - MIT License (c) 2022 Paul Miller (paulmillr.com) *)
 */
