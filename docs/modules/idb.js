@@ -207,10 +207,15 @@ async function getAccountByPubkey (pubkey) {
   return run('get', [pubkey], 'accounts').then(v => v.result)
 }
 
+async function getAllAccounts () {
+  return run('getAll', [], 'accounts').then(v => v.result)
+}
+
 Object.assign(idb, {
   run,
   createOrUpdateAccount,
   getAccountByPubkey,
+  getAllAccounts,
   getCurrentSession,
   getCurrentOrNewSession,
   updatedCurrentSession,

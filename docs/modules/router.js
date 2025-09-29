@@ -59,6 +59,8 @@ class Router extends EventTarget {
       this.#emitRouteChangeEvent({ state })
     })
     this.addEventListener('routechange', this.#transitionPage.bind(this))
+    // Listen for content changes that require dimension updates
+    this.addEventListener('content-changed', this.#transitionPage.bind(this))
     this.updateState({ route: '/' })
   }
 

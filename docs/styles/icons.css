@@ -484,3 +484,27 @@
   bottom: 4px;
   left: 8px
 }
+
+.copy-icon {
+  display: block;
+  width: 12px;
+  height: 15px;
+  border: 1px solid;
+  border-radius: 3px;
+  position: relative;
+  box-sizing: border-box;
+  margin: 5px 0 0 4px;
+
+  &::before {
+    content: "";
+    box-sizing: border-box;
+    position: absolute;
+    width: 11px;
+    height: 13px;
+    border-style: solid;
+    border-width: 1px 0 0 1px;
+    border-top-left-radius: 3px;
+    top: -5px;
+    left: -5px;
+  }
+}

@@ -4,6 +4,17 @@ import { toKebabCase } from 'helpers/string.js'
 const locales = {
   // header
   vaultName: { en: 'Secure Login', pt: 'Login Seguro', hasDomNode: true },
+  copyNsec: { en: 'Copy Private Key', pt: 'Copiar Chave Privada', hasDomNode: true },
+  nsecCopiedSuccessfully: { en: 'Private key copied to clipboard', pt: 'Chave privada copiada para área de transferência' },
+  nsecCopyError: { en: 'Failed to copy private key', pt: 'Falha ao copiar chave privada' },
+  authenticationRequired: { en: 'Authentication required to copy private key', pt: 'Autenticação necessária para copiar chave privada' },
+  authenticationFailedDueToInactivity: { en: 'You took too long to authenticate. Try Again', pt: 'Você demorou muito na autenticação. Tente novamente' },
+  noAccountsFound: { en: 'No accounts found', pt: 'Nenhuma conta encontrada' },
+  loadingAccounts: { en: 'Loading accounts...', pt: 'Carregando contas...' },
+  errorLoadingAccounts: { en: 'Error loading accounts', pt: 'Erro ao carregar contas' },
+  clickToCopyNpub: { en: 'Click to copy public key', pt: 'Clique para copiar chave pública' },
+  npubCopied: { en: 'Copied!', pt: 'Copiado!' },
+  copyFailed: { en: 'Copy failed', pt: 'Falha ao copiar' },
   back: { en: 'Back', pt: 'Voltar', hasDomNode: true },
   // /
   updateAvailable: { en: 'New Version Available!', pt: 'Nova Versão Disponível!', hasDomNode: true },

@@ -89,8 +89,8 @@ async function getPrivkeyFromSecureElement () {
 }
 
 // Do this to confirm a sensitive operation
-async function reauthenticateWithPasskey (privkey, rawId) {
-  if (!privkey || !rawId) return false
+async function reauthenticateWithPasskey (pubkey, rawId) {
+  if (!pubkey || !rawId) return false
 
   // we only know the current unlocked session key
   const publicKeyCredentialDescriptor = {
@@ -112,7 +112,17 @@ async function reauthenticateWithPasskey (privkey, rawId) {
     publicKey: publicKeyCredentialRequestOptions,
     mediation: 'required' // the user will always be asked to authenticate
   })
-  return privkey === bytesToHex(new Uint8Array(userHandle /* ArrayBuffer */))
+  let rawPrivkey = new Uint8Array(userHandle /* ArrayBuffer */)
+  const success = pubkey === getPublicKey(rawPrivkey)
+  let privkey
+  if (success) {
+    privkey = bytesToHex(rawPrivkey)
+  } else {
+    rawPrivkey = null
+    privkey = null
+  }
+
+  return { success, privkey, rawPrivkey }
 }
 
 // This privkey will encrypt account privkeys on idb upon locking screen

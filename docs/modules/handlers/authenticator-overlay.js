@@ -32,7 +32,7 @@ function init () {
 
     // If on home page and no users are signed in, show overlay
     if (currentRoute === '/' && !NostrSigner.hasLoggedInUsers) {
-      showAuthenticatorOverlay()
+      // showAuthenticatorOverlay()
     } else if (NostrSigner.hasLoggedInUsers) {
       // If users are signed in, always hide overlay regardless of route
       hideAuthenticatorOverlay()
@@ -57,7 +57,7 @@ function hideAuthenticatorOverlay () {
 async function maybeShowAuthenticatorOverlay () {
   // Show authenticator overlay only if no users are signed in
   if (!NostrSigner.hasLoggedInUsers) {
-    showAuthenticatorOverlay()
+    // showAuthenticatorOverlay()
   }
 }
 

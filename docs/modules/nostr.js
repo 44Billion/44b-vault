@@ -6886,6 +6886,9 @@ function parseTLV(data) {
   }
   return result;
 }
+function nsecEncode(key) {
+  return encodeBytes("nsec", key);
+}
 function npubEncode(hex2) {
   return encodeBytes("npub", hexToBytes2(hex2));
 }
@@ -7515,6 +7518,7 @@ export {
   decode as nip19Decode,
   nip44,
   npubEncode,
+  nsecEncode,
   obfuscate
 };
 /*! Bundled license information:

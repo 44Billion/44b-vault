@@ -130,8 +130,9 @@ The vault operates within an iframe to create a security boundary:
 - **HTML font-size**: `0.0625em` (1/16th of browser default = 1px base)
 - **Body font-size**: `16rem` (equivalent to 16px)
 - **Result**: `1rem = 1px` throughout the application
-- **Examples**: Use `24rem` for 24px, `16rem` for 16px, `14rem` for 14px
-- **Important**: Never use standard CSS assumptions about rem units - always treat `1rem = 1px`
+- **Font Sizes**: Use rem units - `24rem` for 24px, `16rem` for 16px, `14rem` for 14px
+- **Layout Properties**: Use px units for width, height, padding, margin, border-width, etc.
+- **Important**: Never use standard CSS assumptions about rem units - always treat `1rem = 1px` for font-size only
 
 ### Icons
 - **CSS-only Icons** - No SVG for security reasons
@@ -146,6 +147,14 @@ The vault operates within an iframe to create a security boundary:
   - Common icons: `gg-eye` (visibility), `gg-eye-alt` (hidden), `gg-lock`, `gg-user-add`, etc.
 
 ## Development Guidelines
+
+### Code Consistency Checklist
+Before implementing any handler, verify:
+1. **User Feedback**: Are you using `showSuccessOverlay`/`showErrorOverlay` instead of custom messages?
+2. **Route Handling**: Are you using `router.addEventListener` with correct event structure?
+3. **Translation**: Are you using `t({ key: 'name' })` object syntax?
+4. **Import Patterns**: Are you following established import conventions?
+5. **Error States**: Are all error conditions handled with overlays?
 
 ### Adding Nostr NIP Helpers
 - **Location**: Add new NIP modules in `/build/nostr/` (e.g., `nip19.js`)
@@ -163,11 +172,41 @@ The vault operates within an iframe to create a security boundary:
 - Each handler manages a specific page or UI slice
 - All handlers initialized via `initHandlers()` function
 
+### Error Handling & User Feedback
+- **CRITICAL**: Always use existing overlay system for user feedback
+- **Success Messages**: Use `showSuccessOverlay(message)` from `helpers/misc.js`
+- **Error Messages**: Use `showErrorOverlay(message, details?)` from `helpers/misc.js`
+- **Never create custom message elements** - use the established overlay system
+- **Translation**: Always use `t({ key: 'translationKey' })` object syntax, never `t('key')`
+- **Overlay Integration**: Import overlays in any handler that needs user feedback
+
+### Route Handling Pattern
+- **Event Source**: Use `router.addEventListener('routechange', ...)`
+- **Event Structure**: Access route via `e.detail.state.route`
+- **Route Format**: Routes include leading slash (e.g., `/backup-accounts`)
+- **Pattern**: Check `if (e.detail.state.route !== '/your-route') return`
+- **Import**: Always `import { router } from 'router'`
+
+### Import Patterns
+- **IDB**: Default import `import idb from 'idb'`, use `idb.methodName()`
+- **Translator**: Named import `import { t } from 'translator'`
+- **Router**: Named import `import { router } from 'router'`
+- **Overlays**: Named import `import { showSuccessOverlay, showErrorOverlay } from 'helpers/misc.js'`
+
+### Translation System
+- **Function Signature**: `t({ key: 'translationKey', l?: 'languageCode' })`
+- **Correct Usage**: `t({ key: 'noAccountsFound' })`
+- **Wrong Usage**: `t('noAccountsFound')` ❌
+- **Language Override**: `t({ key: 'message', l: 'pt' })`
+- **Always add missing keys** to `translator.js` with both English and Portuguese translations
+
 ### Security Considerations
 - No server-side dependencies for key operations
 - Iframe isolation for security boundaries
 - Code transparency through GitHub Pages deployment
 - Minimal attack surface through reduced dependencies
+- **Always use existing overlay system** - prevents inconsistent UX and potential security issues
+- **Never bypass established patterns** - they exist for security and consistency reasons
 
 ## Testing
 
