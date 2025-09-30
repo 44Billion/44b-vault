@@ -9,13 +9,13 @@
     "keychain",
     "login"
   ],
-  "homepage": "https://github.com/44Billion/vault#readme",
+  "homepage": "https://github.com/44Billion/44b-vault#readme",
   "bugs": {
-    "url": "https://github.com/44Billion/vault/issues"
+    "url": "https://github.com/44Billion/44b-vault/issues"
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/44Billion/vault.git"
+    "url": "git+https://github.com/44Billion/44b-vault.git"
   },
   "license": "MIT",
   "author": "Arthur França - nostr:npub1l3cgtsurhfchg4cyhhqudm70074sr96srhje330xc5m6czej5n9s9q6vs2",

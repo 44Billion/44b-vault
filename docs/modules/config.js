@@ -17,10 +17,13 @@ function initConfig () {
   ]
     .map(([k, d]) => [k, getQueryParam(k) || d])
     .reduce((r, [k, v]) => ({ ...r, [k]: v }), {})
-  config.isDev = ['127.0.0.1', 'localhost'].includes(window.location.hostname) &&
-    !!document.querySelector(
-      'head > script[src="/___vscode_livepreview_injected_script"]'
-    )
+  config.isDev =
+    (
+      ['127.0.0.1', 'localhost'].includes(window.location.hostname) &&
+      !!document.querySelector('head > script[src="/___vscode_livepreview_injected_script"]')
+    ) ||
+    window.location.host === '0.0.0.0:8000' // npm start's python server
+
   // reset to index.html without query string nor URI fragments
   history.replaceState(undefined, '', window.location.origin + window.location.pathname)
 }

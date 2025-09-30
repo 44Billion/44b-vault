@@ -45,19 +45,22 @@ function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
       db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true })
       /*
       {
-        appId, // from +<fullAppId>
-        eKind, // e.g.: '<0|1|10002|...|empty string means "all kinds">'
+        appId, // +[+][+]..., tlv without relay hints, from +<fullAppId>
         name, // e.g.: 'decryption|signing|new-permission-example|...'
+        eKind, // e.g.: '<0|1|10002|...|-1 means "all kinds">'
         ts
       }
       */
-      db.createObjectStore('permissions', { keyPath: ['appId', 'eKind', 'name'] })
+      // NOTE: keyPath order is ['appId','name','eKind'] (name before eKind) so we can
+      // efficiently range-query both the specific kind and the wildcard (-1) in a single
+      // request: IDBKeyRange.bound([appId,name,-1],[appId,name,targetKind])
+      db.createObjectStore('permissions', { keyPath: ['appId', 'name', 'eKind'] })
       /*
       {
-        id, // from +<fullAppId>
-        alias, // abc@44billion.net, i.e. from +<appIdAlias>
-        name, // from bundle event
-        icon, // from bundle event
+        id, // +[+][+]..., from +<fullAppId>
+        alias, // +[+][+]abc@44billion.net, i.e. from +<appIdAlias>[@<domain>]
+        name, // from bundleMetadata event
+        icon: { fx, url }, // from bundle event
         ts
       }
       */
@@ -159,12 +162,36 @@ async function deleteAccountByPubkey (pubkey) {
   return run('delete', [pubkey], 'accounts')
 }
 
+async function hasPermission (appId, eKind, name) {
+  if (!appId || eKind === undefined || !name) throw new Error('appId, eKind and name are required')
+  if (eKind === -1 /* wildcard */) {
+    return run('get', [[appId, name, -1]], 'permissions').then(v => !!v.result)
+  }
+
+  const range = IDBKeyRange.bound([appId, name, -1], [appId, name, eKind])
+  const p = Promise.withResolvers()
+  run('openKeyCursor', [range], 'permissions', null, { p })
+
+  let cursor
+  let keyEKind
+  const continueKey = [appId, name, eKind]
+  while ((cursor = (await p.promise).result)) {
+    keyEKind = cursor.primaryKey[2]
+    if (keyEKind === -1 || keyEKind === eKind) return true
+
+    Object.assign(p, Promise.withResolvers())
+    cursor.continue(continueKey)
+  }
+  return false
+}
+
 Object.assign(idb, {
   run,
   createOrUpdateAccount,
   getAccountByPubkey,
   getAllAccounts,
   deleteAccountByPubkey,
+  hasPermission,
   appendLog
 })
 

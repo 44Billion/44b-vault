@@ -7,6 +7,7 @@ import { getProfile, getRelays } from 'queries'
 import { freeRelays } from 'nostr-relays'
 import { getSvgAvatar } from 'avatar'
 import { showSuccessOverlay, showErrorOverlay, getRandomId } from 'helpers/misc.js'
+import { setAccountsState } from 'messenger'
 import { t } from 'translator'
 
 const loadAccountBtn = document.querySelector('#\\/add-account-with-passkey button.load-account')
@@ -81,6 +82,7 @@ async function onButtonClick () {
 
     // Memoize the signer to keep privkey access
     NostrSigner.getOrCreate(privkey)
+    setAccountsState() // async, don't await
 
     showSuccessOverlay(t({ key: 'accountLoadedSuccessfully' }))
 

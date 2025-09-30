@@ -5,79 +5,142 @@ import { translateTo, t } from 'translator'
 import idb from 'idb'
 import NostrSigner from 'nostr-signer'
 
-export function initMessanger () {
-  window.addEventListener('message', async e => {
+let reqId = 0
+const {
+  promise: browserPortPromise,
+  resolve: resolveBrowserPort,
+  rejectBrowserPort
+} = Promise.withResolvers()
+
+async function getAllAccounts () {
+  const { loggedInPubkeys } = NostrSigner
+  return (await idb.getAllAccounts()).map(({ pubkey, profile, relays }) => {
+    return {
+      pubkey, profile, relays,
+      isLocked: !loggedInPubkeys.includes(pubkey)
+    }
+  })
+}
+
+export async function initMessenger () {
+  const isntInIframe = window === window.top
+  if (isntInIframe) {
+    const portStub = {
+      postMessage: msg => {
+        console.log('Vault isn\'t in iframe, ignoring message', msg)
+      }
+    }
+    resolveBrowserPort(portStub)
+    return
+  }
+
+  const { port1: browserPort, port2: vaultPortForBrowser } = new MessageChannel()
+
+  browserPort.addEventListener('message', e => {
+    if (e.data.code !== 'BROWSER_READY') return rejectBrowserPort()
+    resolveBrowserPort(browserPort)
+  }, { once: true })
+
+  async function tellBrowserImReady () {
+    const readyMsg = {
+      reqId: String(++reqId),
+      code: 'VAULT_READY',
+      payload: {
+        // take the opportunity to kickstart the browser side
+        accounts: await getAllAccounts()
+      }
+    }
+    postMessage(window.parent, readyMsg, {
+      targetOrigin: config.isDev ? '*' : 'https://44billion.net',
+      transfer: [vaultPortForBrowser]
+    })
+  }
+
+  browserPort.addEventListener('message', async e => {
     if (
       (!config.isDev && e.origin !== 'https://44billion.net') ||
       ['code', 'payload'].some(v => !(v in e.data)) ||
-      typeof2(e.data.payload) !== 'object'
+      typeof2(e.data.payload) !== 'object' ||
+      !await browserPortPromise.catch(() => false)
     ) return
-    const { reqId } = e.data.payload
-    let resPayload
+
+    const { reqId } = e.data
+    let resData
     if (typeof2(reqId) !== 'string') {
       const key = 'reqIdTypeError'
-      resPayload = { reqId, error: t({ key }), code: toAllCaps(key) }
+      resData = { reqId, error: new Error(`${toAllCaps(key)}: ${t({ key })}`) }
     }
 
-    if (!resPayload) {
+    if (!resData) {
       switch (e.data.code) {
         case 'TRANSLATE': {
           try {
             translateTo(e.data.payload.lang)
-            resPayload = { reqId, result: true }
+            resData = { reqId, payload: true }
           } catch (err) {
-            resPayload = { reqId, error: err.message }
+            resData = { reqId, error: err.message }
           }
           break
         }
-        case 'NOSTR_SIGN': {
-          // TODO: fail at NostrSigner if no current session
-          const { reqId, pubkey, method, params, app = e.origin } = e.data.payload
-          resPayload = await NostrSigner.run({ reqId, pubkey, method, params })
+        case 'NIP07': {
+          const { pubkey, method, params, app = {}, ns = [] } = e.data.payload
+          const [nsName = '', ...nsParams] = ns
+          resData = await NostrSigner.run({ app, ns, pubkey, method, params })
+
           idb.appendLog({
             origin: e.origin, // iframe parent
             app, // may be delegating
-            status: resPayload.error ? 'failure' : 'success',
+            status: resData.error ? 'failure' : 'success',
             ts: Math.floor(Date.now() / 1000),
+            ns: { name: nsName, params: nsParams },
             pubkey,
             method,
             params,
-            ...(resPayload.error && { message: resPayload.error, code: 'ERROR' })
+            error: resData.error
+              ? {
+                  message: resData.error.message,
+                  code: resData.error.context.code,
+                  eventKind: resData.error.context.eventKind
+                }
+              : {}
           })
           break
         }
         default: {
           const key = 'unknownMessageCodeError'
-          resPayload = { reqId, error: t({ key }), code: toAllCaps(key) }
+          resData = { error: new Error(`${toAllCaps(key)}: ${t({ key })}`) }
         }
       }
     }
 
-    window.parent.postMessage({
-      code: e.data.code,
-      payload: resPayload // { reqId: str, ?result, ?error: str }
+    browserPort.postMessage({
+      reqId: e.data.reqId,
+      code: 'REPLY',
+      ...resData // { ?payload, ?error }
     }, e.origin)
   })
+  browserPort.start()
+  return tellBrowserImReady()
 }
 
-let reqId = 0
 // on view height change
-export function changeDimensions (dimensions /* { height } */) {
-  window.parent.postMessage({
+export async function changeDimensions (dimensions /* { height } */) {
+  (await browserPortPromise).postMessage({
+    reqId: String(++reqId),
     code: 'CHANGE_DIMENSIONS',
     payload: {
-      reqId: String(++reqId),
       ...dimensions
     }
   })
 }
-// on selecting an account (or none) due to logging out (clearing acc data)
-export function setPubkey (pubkey = null) {
-  window.parent.postMessage({
-    code: 'SET_PUBKEY',
+
+// on adding/removing/locking account
+export async function setAccountsState () {
+  (await browserPortPromise).postMessage({
+    reqId: String(++reqId),
+    code: 'SET_ACCOUNTS_STATE',
     payload: {
-      reqId: String(++reqId),
-      pubkey
+      accounts: await getAllAccounts()
     }
   })
 }

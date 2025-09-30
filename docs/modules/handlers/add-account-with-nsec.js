@@ -7,6 +7,7 @@ import { freeRelays } from 'nostr-relays'
 import { getSvgAvatar } from 'avatar'
 import { storeAccountPrivkeyInSecureElement } from 'passkey-manager'
 import { showSuccessOverlay, showErrorOverlay, getRandomId } from 'helpers/misc.js'
+import { setAccountsState } from 'messenger'
 import { t } from 'translator'
 
 const nsecInput = document.getElementById('nsec-input')
@@ -134,6 +135,7 @@ async function onButtonClick () {
 
     // Memoize the signer to keep privkey access
     NostrSigner.getOrCreate(privkey)
+    setAccountsState() // async, don't await
 
     showSuccessOverlay(t({ key: 'accountLoadedSuccessfully' }))
     clearInput()

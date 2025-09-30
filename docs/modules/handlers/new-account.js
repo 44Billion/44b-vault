@@ -7,6 +7,7 @@ import nostrRelays, { seedRelays, freeRelays } from 'nostr-relays'
 import { eventToProfile, eventToRelays } from 'queries'
 import idb from 'idb'
 import { showSuccessOverlay, showErrorOverlay } from 'helpers/misc.js'
+import { setAccountsState } from 'messenger'
 import { t } from 'translator'
 
 let currentPrivkey = null
@@ -120,6 +121,7 @@ async function createAccount (privkey) {
         profile: await eventToProfile(profileEvent, { _getSvgAvatar: getSvgAvatar }),
         relays: eventToRelays(relaysEvent)
       })
+      setAccountsState() // async, don't await
     } catch (err) {
       console.error(err)
       throw new Error('IDB_ACCOUNT_CREATE_ERROR')

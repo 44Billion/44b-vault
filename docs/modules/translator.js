@@ -47,6 +47,8 @@ const locales = {
   backupKeys: { en: 'Backup Accounts', pt: 'Fazer Backup das Contas', hasDomNode: true },
   permissions: { en: 'Permissions', pt: 'Permissões', hasDomNode: true },
   logout: { en: 'Log Out', pt: 'Sair', hasDomNode: true },
+  // /logout
+  logoutAccount: { en: 'Log Account Out', pt: 'Sair da Conta' },
   // /info
   isVaultSecure: { en: 'What makes "Secure Login" a secure credential vault?', pt: 'O que torna o "Login Seguro" um cofre de credenciais realmente seguro?', hasDomNode: true },
   vaultSecurityExplanation1: { en: 'Your user credentials are stored on the device\'s Secure Element chip.', pt: 'Suas credenciais de usuário são salvas no chip seguro SE do dispositivo.', hasDomNode: true },

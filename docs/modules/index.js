@@ -45,7 +45,7 @@ async function load (isntInIframe) {
 async function showBody (isntInIframe) {
   if (isntInIframe) document.body.classList.add('detached')
   if (config.isDev) {
-    console.log('config', config)
+    console.log('[vault] config:', config)
     document.body.classList.add('vscode')
     document.getElementById('view').style.transition = 'none'
     document.getElementById('pages').style.transition = 'none'

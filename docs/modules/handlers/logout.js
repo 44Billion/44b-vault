@@ -4,6 +4,7 @@ import { npubEncode } from 'nostr'
 import { t } from 'translator'
 import { router } from 'router'
 import { showErrorOverlay } from 'helpers/misc.js'
+import { setAccountsState } from 'messenger'
 import NostrSigner from 'nostr-signer'
 
 let isActive = false
@@ -192,6 +193,7 @@ async function logoutAccount (account, itemElement) {
     // Cleanup signer and delete account from IndexedDB
     NostrSigner.cleanup(account.pubkey)
     await idb.deleteAccountByPubkey(account.pubkey)
+    setAccountsState() // async, don't await
 
     // Remove the account item from the DOM
     itemElement.remove()

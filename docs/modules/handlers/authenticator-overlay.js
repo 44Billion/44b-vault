@@ -55,10 +55,7 @@ function hideAuthenticatorOverlay () {
 }
 
 async function maybeShowAuthenticatorOverlay () {
-  // Show authenticator overlay only if no users are signed in
-  if (!NostrSigner.hasLoggedInUsers) {
-    // showAuthenticatorOverlay()
-  }
+  if (!NostrSigner.hasLoggedInUsers) showAuthenticatorOverlay()
 }
 
 init()

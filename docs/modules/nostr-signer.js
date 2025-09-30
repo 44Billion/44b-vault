@@ -1,6 +1,7 @@
 import idb from 'idb'
 import { getPublicKey, finalizeEvent, nip44, nip04 } from 'nostr'
 import { hexToBytes } from 'helpers/misc.js'
+import { serializeError } from 'helpers/error.js'
 
 // Capture stable references to avoid post-load monkey-patching
 const nip44GetConversationKey = nip44.getConversationKey.bind(nip44)
@@ -84,35 +85,53 @@ export default class NostrSigner {
     clearTimeout(this.#conversationKeyGcTimeout)
   }
 
-  static async run ({ reqId, pubkey, method, params }) {
+  static async run ({ app, pubkey, method, params }) {
+    let eventKind
     try {
-      // pubkey ??= await idb.getPubkey()
-      // if (!pubkey) {
-      //   pubkey = await idbGetLastUsedPubkey()
-      //   // select account for apps that rely on signer to tell the logged in user
-      //   // by asking with method=getPublicKey
-      //   await idbSetPubkey(pubkey)
-      // }
+      const account = await idb.getAccountByPubkey(pubkey)
+      if (!account) throw new Error('unknown-account: Login with account first')
 
-      const signer = this.nostrSigners[pubkey] ??= (async () => {
-        // decrypt account's privkey using selected session's privkey, or fail
-        const privkey = await idb.getPrivateKey(pubkey)
-        return new this(privkey)
-      })()
-      // const signer = this.nostrSigners[pubkey] ??= (async () => {
-      //   const privkey = tempKeypair[pubkey] || await idb.getPrivkey(pubkey)
-      //   return new this(privkey)
-      // })()
-      // return {
-      //   reqId,
-      //   result: signer.resultsByReqId[reqId] ??= await signer[method](...params)
-      // }
-    } catch (error) {
-      return {
-        reqId,
-        error: error.message
+      const signer = this.#nostrSignersByPubkey[pubkey]
+      if (!signer) throw new Error('auth-required: Unlock account first')
+
+      if (method.includes('_')) {
+        // get_public_key -> getPublicKey
+        method = method.replace(/_([a-z0-9])/g, (_, c) => c.toUpperCase())
       }
+
+      // TODO: find out kind by decrypting first
+      eventKind = (() => {
+        switch (method) {
+          case 'signEvent': return params?.[0]?.kind
+          default: return -1 // all kinds
+        }
+      })()
+
+      // empty app.id means it's a call meant for the napp browser itself
+      if (app?.id) {
+        const permitted = await signer.#hasPermission(app.id, eventKind, method)
+        if (!permitted) throw new Error('not-permitted: Not allowed to ' + method)
+      }
+
+      const reqId = JSON.stringify([method, params])
+      const result = await signer.#getResultsByReqId(reqId, method, params)
+      return { payload: result }
+    } catch (err) {
+      const [errorCode, ...messages] = err.message.split(':')
+      const error = new Error(messages[0][0] === ' ' ? messages.join(':').slice(1) : messages.join(':'))
+      const context = {
+        code: errorCode,
+        eventKind
+      }
+      return { error: serializeError(error, context) }
     }
+  }
+
+  async #getResultsByReqId (reqId, method, params) {
+    if (typeof this[method] !== 'function') {
+      throw new Error('unsupported-method: ' + method)
+    }
+    return (this.#resultsByReqId[reqId] ??= await this[method](...params))
   }
 
   #scheduleResultGc () {
@@ -121,6 +140,20 @@ export default class NostrSigner {
         .forEach(v => delete this.#resultsByReqId[v])
       this.#scheduleResultGc()
     }, 60000)
+  }
+
+  static methodNameToPermissionName = {
+    getPublicKey: 'readProfile',
+    signEvent: 'signEvent',
+    nip04Encrypt: 'encrypt',
+    nip04Decrypt: 'decrypt',
+    nip44Encrypt: 'encrypt',
+    nip44Decrypt: 'decrypt'
+  }
+  #hasPermission (appId, eKind, name) {
+    name = NostrSigner.methodNameToPermissionName[name]
+    if (!name) throw new Error('internal-error: Unknown permission name ' + name)
+    return idb.hasPermission(appId, eKind, name)
   }
 
   getPublicKey () {
