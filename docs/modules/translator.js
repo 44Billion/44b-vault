@@ -15,6 +15,8 @@ const locales = {
   clickToCopyNpub: { en: 'Click to copy public key', pt: 'Clique para copiar chave pública' },
   npubCopied: { en: 'Copied!', pt: 'Copiado!' },
   copyFailed: { en: 'Copy failed', pt: 'Falha ao copiar' },
+  logoutAccount: { en: 'Log out account', pt: 'Sair da conta' },
+  logoutAccountError: { en: 'Error logging out account', pt: 'Erro ao sair da conta' },
   back: { en: 'Back', pt: 'Voltar', hasDomNode: true },
   // /
   updateAvailable: { en: 'New Version Available!', pt: 'Nova Versão Disponível!', hasDomNode: true },

@@ -211,11 +211,17 @@ async function getAllAccounts () {
   return run('getAll', [], 'accounts').then(v => v.result)
 }
 
+async function deleteAccountByPubkey (pubkey) {
+  if (!pubkey) throw new Error('pubkey is required')
+  return run('delete', [pubkey], 'accounts')
+}
+
 Object.assign(idb, {
   run,
   createOrUpdateAccount,
   getAccountByPubkey,
   getAllAccounts,
+  deleteAccountByPubkey,
   getCurrentSession,
   getCurrentOrNewSession,
   updatedCurrentSession,

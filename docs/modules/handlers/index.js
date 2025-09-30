@@ -8,7 +8,8 @@ function initHandlers () {
     'add-account-with-nsec',
     'overlays',
     'authenticator-overlay',
-    'backup-accounts'
+    'backup-accounts',
+    'logout'
     // 'lock'
   ]
   return Promise.all(handlers.map(v => import(`./${v}.js`)))
