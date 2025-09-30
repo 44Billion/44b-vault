@@ -21,7 +21,6 @@ const URLS_TO_PRECACHE = [
   './modules/nostr.js',
   './modules/queries.js',
   './modules/router.js',
-  './modules/session-manager.js',
   './modules/sw-manager.js',
   './modules/translator.js',
   './styles/global.css',

@@ -30,7 +30,7 @@ const routes = {
     page: 1,
     stateKey: null
   },
-  '/lock': {
+  '/permissions': {
     page: 1,
     stateKey: null
   },

@@ -125,80 +125,8 @@ async function reauthenticateWithPasskey (pubkey, rawId) {
   return { success, privkey, rawPrivkey }
 }
 
-// This privkey will encrypt account privkeys on idb upon locking screen
-// CAUTION: Don't call it more than once or else it will create
-// a new credential each time (cause of different privkey arg)
-async function storeUnlockPrivkeyInSecureElement ({ privkey }) {
-  const publicKeyCredentialCreationOptions = {
-    challenge: crypto.getRandomValues(new Uint8Array(32)),
-    rp: {
-      id: window.location.hostname,
-      name: t({ key: 'vaultName' })
-    },
-    user: {
-      // credentials.create() can upsert by user.id, but it wouldn't help us
-      // because our id can't be fixed (see comment on authenticatorSelection.residentKey)
-      id: hexToBytes(privkey), // Uint8Array
-      name: t({ key: 'unlockPasskeyName' }),
-      // This will help user keep just the most recent one
-      // by manually deleting old unlock-related-passkey from his device
-      displayName: new Date().toLocaleDateString()
-    },
-    pubKeyCredParams: [
-      { alg: -8, type: 'public-key' },
-      { alg: -7, type: 'public-key' },
-      { alg: -257, type: 'public-key' }
-    ],
-    authenticatorSelection: {
-      authenticatorAttachment: 'platform',
-      // unfortunatelly, we can't set user.id to
-      // e.g.: new TextEncoder().encode('unlock-nostr-secure-login')
-      // and later limit credentials to allowCredentials: [{ id, type: 'public-key' }]
-      // when unlocking screen
-      // because the return.rawId/return.response.userHandle of credentials.get()
-      // are the only things returned about the user (can't access name/displayName)
-      residentKey: 'required', // person can select an user from a list of passkeys
-      userVerification: 'discouraged' // if possible, don't ask for pin/biometric
-    },
-    hints: ['client-device']
-  }
-  return navigator.credentials.create({
-    publicKey: publicKeyCredentialCreationOptions
-  }).then(v => {
-    if (v.authenticatorAttachment !== 'platform') {
-      throw new Error('Another device was used')
-    }
-    return v
-  }).then(v => {
-    // force asking for pin/biometrics on next credentials.get()
-    navigator.credentials.preventSilentAccess()
-    return v
-  })
-}
-
-async function getUnlockPrivkeyFromSecureElement () {
-  const publicKeyCredentialRequestOptions = {
-    challenge: crypto.getRandomValues(new Uint8Array(32)),
-    rpId: window.location.hostname,
-    // Unfortunately we can't narrow down the passkey selection
-    // to just the one meant to unlock screen
-    allowCredentials: [],
-    userVerification: 'required', // e.g: ask for OS password if no biometric/PIN support
-    hints: ['client-device'] // unlocking just makes sense with passkey created on local device
-  }
-  const { response: { userHandle } } = await navigator.credentials.get({
-    publicKey: publicKeyCredentialRequestOptions
-  })
-  const unlockPrivkey = bytesToHex(new Uint8Array(userHandle /* ArrayBuffer */))
-  // don't forget to delete it after locking again
-  // storeOnIdb() .. do this on the unlock handler? do it here to make sure we dont forget it? no YES
-  return unlockPrivkey
-}
-
 export {
   storeAccountPrivkeyInSecureElement,
   getPrivkeyFromSecureElement,
-  reauthenticateWithPasskey,
-  storeUnlockPrivkeyInSecureElement,
-  getUnlockPrivkeyFromSecureElement
+  reauthenticateWithPasskey
 }

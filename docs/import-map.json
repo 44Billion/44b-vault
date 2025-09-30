@@ -17,7 +17,6 @@
     "passkey-manager": "./modules/passkey-manager.js",
     "queries": "./modules/queries.js",
     "router": "./modules/router.js",
-    "session-manager": "./modules/session-manager.js",
     "sw-manager": "./modules/sw-manager.js",
     "translator": "./modules/translator.js"
   }

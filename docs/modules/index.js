@@ -1,7 +1,6 @@
 import { initDb } from 'idb'
 import { initSw } from 'sw-manager'
 import { initConfig, config } from 'config'
-import { initSession } from 'session-manager'
 import { initTranslation } from 'translator'
 import { changeDimensions } from 'messenger'
 import { initHandlers } from 'handlers'
@@ -38,7 +37,6 @@ await initDb()
 })()
 
 async function load (isntInIframe) {
-  // await initSession()
   await initTranslation()
   await initHandlers()
   await showBody(isntInIframe)

@@ -67,8 +67,6 @@ The vault operates within an iframe to create a security boundary:
     │   ├── index.js          # Handler initialization (initHandlers function)
     │   ├── header.js         # Header component logic
     │   ├── home.js           # Home page handler
-    │   ├── lock.js           # Lock screen handler
-    │   ├── unlock.js         # Unlock handler
     │   └── new-account.js    # Account creation handler
     ├── avatar.js             # Avatar generation
     ├── config.js             # Configuration management
@@ -79,7 +77,6 @@ The vault operates within an iframe to create a security boundary:
     ├── nostr.js              # Nostr protocol utilities
     ├── passkey-manager.js    # Passkeys API integration
     ├── queries.js            # Data queries and caching
-    ├── session-manager.js    # Session state management
     ├── sw-manager.js         # Service worker management
     └── translator.js         # Internationalization
 
@@ -113,7 +110,6 @@ The vault operates within an iframe to create a security boundary:
 
 ### Security & Storage
 - **`passkey-manager.js`** - Manages private key storage via Passkeys API
-- **`session-manager.js`** - Handles user session state
 
 ### UI Components
 - **`handlers/`** - Modularized page logic (avoiding custom elements for better developer accessibility)

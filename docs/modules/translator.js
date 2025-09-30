@@ -15,8 +15,6 @@ const locales = {
   clickToCopyNpub: { en: 'Click to copy public key', pt: 'Clique para copiar chave pública' },
   npubCopied: { en: 'Copied!', pt: 'Copiado!' },
   copyFailed: { en: 'Copy failed', pt: 'Falha ao copiar' },
-  logoutAccount: { en: 'Log out account', pt: 'Sair da conta' },
-  logoutAccountError: { en: 'Error logging out account', pt: 'Erro ao sair da conta' },
   back: { en: 'Back', pt: 'Voltar', hasDomNode: true },
   // /
   updateAvailable: { en: 'New Version Available!', pt: 'Nova Versão Disponível!', hasDomNode: true },
@@ -47,9 +45,7 @@ const locales = {
   addAccountWithNsecButton: { en: 'Add Account', pt: 'Adicionar Conta', hasDomNode: true },
 
   backupKeys: { en: 'Backup Accounts', pt: 'Fazer Backup das Contas', hasDomNode: true },
-  lock: { en: 'Lock Screen', pt: 'Bloquear Tela', hasDomNode: true },
-  unlock: { en: 'Unlock Screen', pt: 'Desbloquear Tela', hasDomNode: true },
-  unlockPasskeyName: { en: 'Use This Just to Unlock Screen', pt: 'Use Este Apenas p/ Desbloquear Tela' },
+  permissions: { en: 'Permissions', pt: 'Permissões', hasDomNode: true },
   logout: { en: 'Log Out', pt: 'Sair', hasDomNode: true },
   // /info
   isVaultSecure: { en: 'What makes "Secure Login" a secure credential vault?', pt: 'O que torna o "Login Seguro" um cofre de credenciais realmente seguro?', hasDomNode: true },
@@ -80,8 +76,6 @@ const locales = {
   // modules/messenger.js
   reqIdTypeError: { en: 'reqId field must be a string', pt: 'Campo reqId precisa ser textual' },
   unknownMessageCodeError: { en: 'Unknown message code', pt: 'O "code" da mensagem é desconhecido' },
-  // modules/session-manager.js
-  sessionKeyDoesntExistError: { en: 'Session key doesn\'t exist', pt: 'Chave da sessão não existe' },
   // modules/translator.js
   unsupportedLanguageCode: {
     en: 'Unsupported language code. It must be one of these:',

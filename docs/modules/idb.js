@@ -1,8 +1,9 @@
-import { getPublicKey, nip44 } from 'nostr'
-
-const idb = {}
 const MIN_KEY = -Infinity
 const MAX_KEY = [[]]
+const idb = {
+  minKey: MIN_KEY,
+  maxKey: MAX_KEY
+}
 let db
 async function initDb (...args) {
   return (db ??= await _initDb(...args).then(db => {
@@ -95,64 +96,6 @@ async function run (method, args = [], storeName, indexName, { p = Promise.withR
   return p.promise
 }
 
-async function updatePendingCurrentSessionAssociations (currentSession) {
-  currentSession ??= await idb.getCurrentSession()
-  if (
-    // never locked current session (no privkey) won't have 'sessions' store association
-    !currentSession?.privkey ||
-    // we currently don't care about which dirty fields
-    // !(dirtyFields = currentSession.pendingAssociationUpdateFields)
-    !currentSession.pendingAssociationUpdateFields
-  ) return
-
-  const sessionPubkey = getPublicKey(currentSession.privkey)
-  const session = await run('get', [sessionPubkey], 'session').then(v => v.result)
-  if (!session) throw new Error('Should had created session (when locking for the first time) before calling updatePendingCurrentSessionAssociations')
-
-  const ck = await nip44.getConversationKey(currentSession.privkey, session.pubkey)
-  session.eAccountPubkeys = await nip44.encrypt(
-    JSON.stringify(currentSession.accountPubkeys || {}),
-    ck
-  )
-
-  await updatedSession(session)
-  delete currentSession.pendingAssociationUpdateFields
-  return updatedCurrentSession(currentSession)
-}
-async function updatedSession (session) {
-  return run('put', [session], 'sessions')
-}
-async function updatedCurrentSession (currentSession) {
-  return run('put', [currentSession], 'current-session')
-}
-// sessions never locked won't be persisted on sessions store
-async function hasOnceLockedSessions () {
-  return !!await run('getKey', [IDBKeyRange.bound(MIN_KEY, MAX_KEY)], 'sessions').then(v => v.result)
-}
-async function hasCurrentSessionEverBeenLocked () {
-  return !!(await getCurrentSession()).privkey
-}
-async function getCurrentSession () {
-  return run('get', [IDBKeyRange.bound(MIN_KEY, MAX_KEY)], 'current-session').then(v => v.result)
-}
-async function startFreshSession () {
-  const currentSession = {
-    accountPubkeys: {}
-  }
-  await run('put', [currentSession], 'current-session')
-  return currentSession
-}
-async function getCurrentOrNewSession () {
-  const currentSession = await getCurrentSession()
-  if (currentSession) {
-    await updatePendingCurrentSessionAssociations(currentSession)
-    return currentSession
-  } else {
-    if (await hasOnceLockedSessions()) return
-    return startFreshSession()
-  }
-}
-
 async function appendLog (log) {
   // eslint-disable-next-line prefer-const, promise/param-names
   let resolve, reject, promise = new Promise((rs, rj) => { resolve = rs; reject = rj })
@@ -222,16 +165,9 @@ Object.assign(idb, {
   getAccountByPubkey,
   getAllAccounts,
   deleteAccountByPubkey,
-  getCurrentSession,
-  getCurrentOrNewSession,
-  updatedCurrentSession,
-  updatedSession,
-  updatePendingCurrentSessionAssociations,
-  hasOnceLockedSessions,
-  hasCurrentSessionEverBeenLocked,
   appendLog
 })
-// await idb.updatePendingCurrentSessionAssociations()
+
 export default idb
 export {
   initDb
