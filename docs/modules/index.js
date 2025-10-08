@@ -48,8 +48,8 @@ async function showBody (isntInIframe) {
   if (config.isDev) {
     console.log('[vault] config:', config)
     document.body.classList.add('vscode')
-    document.getElementById('view').style.transition = 'none'
-    document.getElementById('pages').style.transition = 'none'
+    // document.getElementById('view').style.transition = 'none'
+    // document.getElementById('pages').style.transition = 'none'
   }
   if (config.mode !== 'widget') document.getElementById('/').classList.add('invisible')
   await maybeShowAuthenticatorOverlay()

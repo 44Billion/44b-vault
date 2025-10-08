@@ -7,10 +7,7 @@ function init () {
   authenticatorCards.forEach(card => {
     card.addEventListener('click', () => {
       const route = card.getAttribute('data-route')
-      if (route) {
-        hideAuthenticatorOverlay()
-        router.goToRoute({ route })
-      }
+      if (route) router.goToRoute({ route })
     })
   })
 
@@ -30,12 +27,11 @@ function init () {
   router.addEventListener('routechange', (e) => {
     const currentRoute = e.detail.state.route
 
-    // If on home page and no users are signed in, show overlay
-    if (currentRoute === '/' && !NostrSigner.hasLoggedInUsers) {
-      // showAuthenticatorOverlay()
-    } else if (NostrSigner.hasLoggedInUsers) {
-      // If users are signed in, always hide overlay regardless of route
+    if (NostrSigner.hasLoggedInUsers) {
       hideAuthenticatorOverlay()
+    } else {
+      if (currentRoute === '/') showAuthenticatorOverlay()
+      else hideAuthenticatorOverlay()
     }
   })
 }
@@ -48,10 +44,12 @@ function showAuthenticatorOverlay () {
 }
 
 function hideAuthenticatorOverlay () {
-  const overlay = document.getElementById('authenticator-overlay')
-  if (overlay) {
-    overlay.classList.add('invisible')
-  }
+  setTimeout(() => {
+    const overlay = document.getElementById('authenticator-overlay')
+    if (overlay) {
+      overlay.classList.add('invisible')
+    }
+  }, 100)
 }
 
 async function maybeShowAuthenticatorOverlay () {

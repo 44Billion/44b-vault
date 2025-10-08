@@ -138,6 +138,11 @@ class Router extends EventTarget {
   goBack ({ toRoot = false, state }) {
     if (this.#hopsFromRoot === 0) return
 
+    const currentPage = getQueryParam('page')
+    setTimeout(() => {
+      document.querySelector(`#page-${currentPage} > div:not(.invisible)`).classList.add('invisible')
+    }, 300) // transition duration
+
     const next = toRoot ? -this.#hopsFromRoot : -1
     this.#hopsFromRoot = this.#hopsFromRoot + next
 
