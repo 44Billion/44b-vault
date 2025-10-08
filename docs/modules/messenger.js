@@ -27,7 +27,7 @@ export async function initMessenger () {
   if (isntInIframe) {
     const portStub = {
       postMessage: msg => {
-        console.log('Vault isn\'t in iframe, ignoring message', msg)
+        config.isDev && console.log('[vault] Vault isn\'t in iframe, ignoring message', msg)
       }
     }
     resolveBrowserPort(portStub)
@@ -50,7 +50,7 @@ export async function initMessenger () {
         accounts: await getAllAccounts()
       }
     }
-    postMessage(window.parent, readyMsg, {
+    window.parent.postMessage(readyMsg, {
       targetOrigin: config.isDev ? '*' : 'https://44billion.net',
       transfer: [vaultPortForBrowser]
     })
@@ -120,7 +120,8 @@ export async function initMessenger () {
     }, e.origin)
   })
   browserPort.start()
-  return tellBrowserImReady()
+  await tellBrowserImReady()
+  return browserPortPromise
 }
 
 // on view height change

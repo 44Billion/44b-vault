@@ -2,7 +2,7 @@ import { initDb } from 'idb'
 import { initSw } from 'sw-manager'
 import { initConfig, config } from 'config'
 import { initTranslation } from 'translator'
-import { changeDimensions } from 'messenger'
+import { initMessenger, changeDimensions } from 'messenger'
 import { initHandlers } from 'handlers'
 import { getQueryParam } from 'helpers/misc.js'
 import { maybeShowAuthenticatorOverlay } from 'handlers/authenticator-overlay.js'
@@ -39,6 +39,7 @@ await initDb()
 async function load (isntInIframe) {
   await initTranslation()
   await initHandlers()
+  await initMessenger()
   await showBody(isntInIframe)
 }
 
@@ -53,10 +54,15 @@ async function showBody (isntInIframe) {
   if (config.mode !== 'widget') document.getElementById('/').classList.add('invisible')
   await maybeShowAuthenticatorOverlay()
   document.body.classList.remove('invisible')
+  // Wait for browser to complete layout/reflow
+  await new Promise(resolve => requestAnimationFrame(resolve))
 
   const oldHeight = document.getElementById('vault').getBoundingClientRect().height
-  const nextViewHeight = document.querySelector('#page-0 > div:not(.invisible)').getBoundingClientRect().height
+  // Get height of the actual content (non-absolute positioned)
+  const visiblePageContent = document.querySelector('#page-0 > div:not(.invisible)')
+  const nextViewHeight = visiblePageContent ? visiblePageContent.getBoundingClientRect().height : 0
   const diffViewHeight = nextViewHeight - document.getElementById('view').getBoundingClientRect().height
+  // requires previous messenger init
   changeDimensions({ height: oldHeight + diffViewHeight })
 
   // set initial view height
@@ -75,7 +81,8 @@ function swUpdateReadyHandler (registration) {
   if (page !== 0) return
 
   const oldHeight = document.getElementById('vault').getBoundingClientRect().height
-  const nextViewHeight = document.querySelector('#page-0 > div:not(.invisible)').getBoundingClientRect().height
+  const visiblePageContent = document.querySelector('#page-0 > div:not(.invisible)')
+  const nextViewHeight = visiblePageContent ? visiblePageContent.getBoundingClientRect().height : 0
   const diffViewHeight = nextViewHeight - document.getElementById('view').style.height.split('px')[0]
   changeDimensions({ height: oldHeight + diffViewHeight })
 
