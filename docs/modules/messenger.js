@@ -2,6 +2,7 @@ import { config } from 'config'
 import { typeof2 } from 'helpers/misc.js'
 import { toAllCaps } from 'helpers/string.js'
 import { translateTo, t } from 'translator'
+import { router } from 'router'
 import idb from 'idb'
 import NostrSigner from 'nostr-signer'
 
@@ -68,7 +69,7 @@ export async function initMessenger () {
     let resData
     if (typeof2(reqId) !== 'string') {
       const key = 'reqIdTypeError'
-      resData = { reqId, error: new Error(`${toAllCaps(key)}: ${t({ key })}`) }
+      resData = { error: new Error(`${toAllCaps(key)}: ${t({ key })}`) }
     }
 
     if (!resData) {
@@ -76,11 +77,32 @@ export async function initMessenger () {
         case 'TRANSLATE': {
           try {
             translateTo(e.data.payload.lang)
-            resData = { reqId, payload: true }
+            resData = { payload: true }
           } catch (err) {
-            resData = { reqId, error: err.message }
+            resData = { error: err.message }
           }
           break
+        }
+        case 'UNLOCK_ACCOUNT': {
+          const { pubkey } = e.data.payload
+          if (!pubkey) {
+            resData = { error: new Error('Missing pubkey in UNLOCK_ACCOUNT payload') }
+            break
+          }
+
+          // Navigate to the unlock-account route with the pubkey as query parameter
+          router.goToRoute({
+            route: '/unlock-account',
+            queryParams: { userPk: pubkey }
+          })
+
+          // Send back a message indicating the route is ready
+          resData = { payload: { isRouteReady: true } }
+          break
+        }
+        case 'CLOSED_VAULT_VIEW': {
+          router.goBack({ toRoot: true })
+          return
         }
         case 'NIP07': {
           const { pubkey, method, params, app = {}, ns = [] } = e.data.payload
@@ -143,5 +165,13 @@ export async function setAccountsState () {
     payload: {
       accounts: await getAllAccounts()
     }
+  })
+}
+
+export async function closeVaultView () {
+  (await browserPortPromise).postMessage({
+    reqId: String(++reqId),
+    code: 'CLOSE_VAULT_VIEW',
+    payload: null
   })
 }

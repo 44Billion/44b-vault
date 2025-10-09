@@ -51,14 +51,6 @@
           </div>
         </div>
 
-        <div id="screen-lock" class="action-view invisible">
-          <div id="screen-lock-icon">
-            <div class="icon-wrapper"><i class="gg-lock"></i></div>
-          </div>
-          <div class="action-btns">
-            <button class="lock"><span class="t-unlock"></span></button>
-          </div>
-        </div>
 
         <div id="authenticator-overlay" class="action-view invisible">
           <div class="authenticator-content">
@@ -187,6 +179,17 @@
                 <!-- Account list will be populated by JavaScript -->
               </div>
             </div>
+            <div id="/unlock-account" class="action-view invisible">
+              <div id="unlock-account-icon">
+                <div class="icon-wrapper"><i class="gg-lock"></i></div>
+              </div>
+              <div class="action-btns">
+                <button class="unlock-account">
+                  <div class="account-picture" id="unlock-account-picture"></div>
+                  <span class="t-unlock-account"></span>
+                </button>
+              </div>
+            </div>
           </div>
           <div id="page-2" class="page">
             <div id="/add-account-with-passkey" class="action-view invisible">
@@ -240,6 +243,7 @@
     "handlers/authenticator-overlay.js": "./modules/handlers/authenticator-overlay.js",
     "handlers/backup-accounts.js": "./modules/handlers/backup-accounts.js",
     "handlers/logout.js": "./modules/handlers/logout.js",
+    "handlers/unlock-account.js": "./modules/handlers/unlock-account.js",
     "helpers/error.js": "./modules/helpers/error.js",
     "helpers/misc.js": "./modules/helpers/misc.js",
     "helpers/string.js": "./modules/helpers/string.js",

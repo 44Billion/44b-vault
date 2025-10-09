@@ -9,7 +9,8 @@ function initHandlers () {
     'overlays',
     'authenticator-overlay',
     'backup-accounts',
-    'logout'
+    'logout',
+    'unlock-account'
   ]
   return Promise.all(handlers.map(v => import(`./${v}.js`)))
 }

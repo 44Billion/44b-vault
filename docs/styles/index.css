@@ -191,36 +191,22 @@
 #fingerprint-icon {
   justify-content: center;
   margin: 10px 0 15px;
-}
-
-#screen-lock, #fingerprint-icon {
   background-color: oklch(0.22 0 0);
   z-index: 30;
   display: flex;
   flex-direction: column;
   align-items: center;
-}
-
-#screen-lock-icon, #fingerprint-icon {
   flex-grow: 1;
   display: flex;
   align-items: center;
 }
 
-#screen-lock-icon .icon-wrapper, #fingerprint-icon .icon-wrapper {
+#fingerprint-icon .icon-wrapper {
   width: 80px;
   height: 80px;
   border-radius: 50%;;
   background-color: oklch(1 0 89.88 / 0.18);
   background-color: light-dark(oklch(0.45 0 89.88 / 0.18), oklch(1 0 89.88 / 0.18));
-}
-
-#screen-lock-icon .icon-wrapper {
-  --ggs: 2;
-}
-
-#screen-lock-icon i {
-  margin-bottom: 15px;
 }
 
 #fingerprint-icon svg {
@@ -854,4 +840,47 @@
     color: oklch(0.75 0.15 25);
     color: light-dark(oklch(0.6 0.15 25), oklch(0.75 0.15 25));
   }
+}
+
+/* Unlock Account */
+#unlock-account-icon {
+  justify-content: center;
+  margin: 15px 0 15px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+}
+
+#unlock-account-icon .icon-wrapper {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  background-color: oklch(1 0 89.88 / 0.18);
+  background-color: light-dark(oklch(0.45 0 89.88 / 0.18), oklch(1 0 89.88 / 0.18));
+  --ggs: 2;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+#unlock-account-icon i {
+  margin-bottom: 15px;
+}
+
+#unlock-account-picture {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background-size: cover;
+  background-position: center;
+  background-repeat: no-repeat;
+  margin-right: 8px;
+  flex-shrink: 0;
+}
+
+#\/unlock-account button.unlock-account {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }

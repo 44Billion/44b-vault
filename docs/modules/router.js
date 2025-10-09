@@ -37,6 +37,10 @@ const routes = {
   '/logout': {
     page: 1,
     stateKey: null
+  },
+  '/unlock-account': {
+    page: 1,
+    stateKey: null
   }
 }
 const routesByPage = Object.entries(routes).reduce((r, [k, v]) => {

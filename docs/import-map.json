@@ -6,6 +6,7 @@
     "handlers/authenticator-overlay.js": "./modules/handlers/authenticator-overlay.js",
     "handlers/backup-accounts.js": "./modules/handlers/backup-accounts.js",
     "handlers/logout.js": "./modules/handlers/logout.js",
+    "handlers/unlock-account.js": "./modules/handlers/unlock-account.js",
     "helpers/error.js": "./modules/helpers/error.js",
     "helpers/misc.js": "./modules/helpers/misc.js",
     "helpers/string.js": "./modules/helpers/string.js",

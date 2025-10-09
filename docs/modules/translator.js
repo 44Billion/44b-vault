@@ -82,7 +82,15 @@ const locales = {
   unsupportedLanguageCode: {
     en: 'Unsupported language code. It must be one of these:',
     pt: 'Código da língua não-suportado. Use um destes:'
-  }
+  },
+  // unlock-account
+  unlockAccount: { en: 'Unlock Account', pt: 'Desbloquear Conta', hasDomNode: true },
+  accountUnlockedSuccessfully: { en: 'Account unlocked successfully', pt: 'Conta desbloqueada com sucesso' },
+  unlockAccountError: { en: 'Error unlocking account', pt: 'Erro ao desbloquear conta' },
+  accountOrUserPubkeyNotFound: { en: 'Account or user public key not found', pt: 'Conta ou chave pública não encontrada' },
+  authenticationFailed: { en: 'Authentication failed', pt: 'Falha na autenticação' },
+  userPubkeyNotProvided: { en: 'User public key not provided', pt: 'Chave pública do usuário não fornecida' },
+  accountNotFound: { en: 'Account not found', pt: 'Conta não encontrada' }
 }
 
 const t = ({ l = config.lang, key }) => locales[key][l] ?? `${l}.${key}`
