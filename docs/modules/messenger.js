@@ -14,11 +14,11 @@ const {
 } = Promise.withResolvers()
 
 async function getAllAccounts () {
-  const { loggedInPubkeys } = NostrSigner
+  const { unlockedPubkeys } = NostrSigner
   return (await idb.getAllAccounts()).map(({ pubkey, profile, relays }) => {
     return {
       pubkey, profile, relays,
-      isLocked: !loggedInPubkeys.includes(pubkey)
+      isLocked: !unlockedPubkeys.includes(pubkey)
     }
   })
 }

@@ -1,5 +1,5 @@
 import { router } from 'router'
-import NostrSigner from 'nostr-signer'
+import idb from 'idb'
 
 function init () {
   // Authenticator overlay cards
@@ -24,10 +24,10 @@ function init () {
   })
 
   // Listen for route changes to show/hide overlay based on auth state
-  router.addEventListener('routechange', (e) => {
+  router.addEventListener('routechange', async e => {
     const currentRoute = e.detail.state.route
 
-    if (NostrSigner.hasLoggedInUsers) {
+    if (await idb.hasLoggedInUsers()) {
       hideAuthenticatorOverlay()
     } else {
       if (currentRoute === '/') showAuthenticatorOverlay()
@@ -53,7 +53,7 @@ function hideAuthenticatorOverlay () {
 }
 
 async function maybeShowAuthenticatorOverlay () {
-  if (!NostrSigner.hasLoggedInUsers) showAuthenticatorOverlay()
+  if (!(await idb.hasLoggedInUsers())) showAuthenticatorOverlay()
 }
 
 init()

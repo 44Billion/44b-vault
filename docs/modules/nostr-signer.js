@@ -31,14 +31,14 @@ export default class NostrSigner {
   #resultsByReqId = {}
   #conversationKeys = {}
 
-  // Get the list of logged-in pubkeys
-  static get loggedInPubkeys () {
+  // Get the list of unlocked logged-in pubkeys
+  static get unlockedPubkeys () {
     return Object.keys(this.#nostrSignersByPubkey)
   }
 
-  // Check if any user is signed in
-  static get hasLoggedInUsers () {
-    return this.loggedInPubkeys.length > 0
+  // Check if any logged-in user is unlocked
+  static get hasUnlockedPubkeys () {
+    return this.unlockedPubkeys.length > 0
   }
 
   // This also caches the privkey on memory

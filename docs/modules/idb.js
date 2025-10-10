@@ -162,6 +162,11 @@ async function deleteAccountByPubkey (pubkey) {
   return run('delete', [pubkey], 'accounts')
 }
 
+async function hasLoggedInUsers () {
+  // Using openKeyCursor with limit 1 is more efficient than counting all records
+  return run('openKeyCursor', [undefined, 'next'], 'accounts').then(v => !!v.result)
+}
+
 async function hasPermission (appId, eKind, name) {
   if (!appId || eKind === undefined || !name) throw new Error('appId, eKind and name are required')
   if (eKind === -1 /* wildcard */) {
@@ -191,6 +196,7 @@ Object.assign(idb, {
   getAccountByPubkey,
   getAllAccounts,
   deleteAccountByPubkey,
+  hasLoggedInUsers,
   hasPermission,
   appendLog
 })
