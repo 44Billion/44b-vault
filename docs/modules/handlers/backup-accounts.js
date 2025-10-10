@@ -8,21 +8,23 @@ import { showSuccessOverlay, showErrorOverlay } from 'helpers/misc.js'
 
 let isActive = false
 
-// Handle route changes
-router.addEventListener('routechange', e => {
-  if (e.detail.state.route !== '/backup-accounts') {
-    isActive = false
-    return
-  }
+function init () {
+  // Handle route changes
+  router.addEventListener('routechange', e => {
+    if (e.detail.state.route !== '/backup-accounts') {
+      isActive = false
+      return
+    }
 
-  if (!isActive) {
-    isActive = true
-    loadBackupAccounts()
-  }
+    if (!isActive) {
+      isActive = true
+      loadBackupAccounts()
+    }
 
-  // Add unmount handler for cleanup when leaving route
-  router.addEventListener('routechange', onUnmount, { once: true })
-})
+    // Add unmount handler for cleanup when leaving route
+    router.addEventListener('routechange', onUnmount, { once: true })
+  })
+}
 
 function onUnmount () {
   isActive = false
@@ -212,4 +214,8 @@ async function copyNsec (account) {
       showErrorOverlay(t({ key: 'nsecCopyError' }))
     }
   }
+}
+
+export {
+  init
 }

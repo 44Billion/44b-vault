@@ -9,21 +9,23 @@ import NostrSigner from 'nostr-signer'
 
 let isActive = false
 
-// Handle route changes
-router.addEventListener('routechange', e => {
-  if (e.detail.state.route !== '/logout') {
-    isActive = false
-    return
-  }
+function init () {
+  // Handle route changes
+  router.addEventListener('routechange', e => {
+    if (e.detail.state.route !== '/logout') {
+      isActive = false
+      return
+    }
 
-  if (!isActive) {
-    isActive = true
-    loadLogoutAccounts()
-  }
+    if (!isActive) {
+      isActive = true
+      loadLogoutAccounts()
+    }
 
-  // Add unmount handler for cleanup when leaving route
-  router.addEventListener('routechange', onUnmount, { once: true })
-})
+    // Add unmount handler for cleanup when leaving route
+    router.addEventListener('routechange', onUnmount, { once: true })
+  })
+}
 
 function onUnmount () {
   isActive = false
@@ -215,4 +217,8 @@ async function logoutAccount (account, itemElement) {
     console.error('Error logging out account:', error)
     showErrorOverlay(t({ key: 'logoutAccountError' }), error.message)
   }
+}
+
+export {
+  init
 }

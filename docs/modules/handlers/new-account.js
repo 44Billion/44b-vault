@@ -13,29 +13,53 @@ import { t } from 'translator'
 let currentPrivkey = null
 let currentPicture = null
 
-const createAccountBtn = document.querySelector('#\\/new-account button.create-account')
-createAccountBtn.addEventListener('click', async () => {
-  createAccountBtn.disabled = true
-  createAccountBtn.getElementsByClassName('t-create-account')[0].classList.add('pulsate')
-  try {
-    if (!currentPrivkey) await setPrivkeyAndAvatar()
-    await createAccount(currentPrivkey)
-    showSuccessOverlay()
+function init () {
+  const createAccountBtn = document.querySelector('#\\/new-account button.create-account')
+  createAccountBtn.addEventListener('click', async () => {
+    createAccountBtn.disabled = true
+    createAccountBtn.getElementsByClassName('t-create-account')[0].classList.add('pulsate')
+    try {
+      if (!currentPrivkey) await setPrivkeyAndAvatar()
+      await createAccount(currentPrivkey)
+      showSuccessOverlay()
+      currentPrivkey = null
+      currentPicture = null
+    } catch (err) {
+      showErrorOverlay(t({ key: 'createAccountError' }), err.message)
+    } finally {
+      createAccountBtn.disabled = false
+      createAccountBtn.getElementsByClassName('t-create-account')[0].classList.remove('pulsate')
+    }
+  })
+
+  const photoPickerBtn = document.querySelector('#\\/new-account button.photo-picker')
+  const avatarNode = photoPickerBtn.querySelector(':scope > div:first-child')
+  const avatarIcon = photoPickerBtn.getElementsByClassName('gg-girl')[0]
+  photoPickerBtn.addEventListener('click', setPrivkeyAndAvatar)
+
+  const displayNameInput = document.getElementById('new-account-display-name')
+
+  function onUnmout () {
     currentPrivkey = null
     currentPicture = null
-  } catch (err) {
-    showErrorOverlay(t({ key: 'createAccountError' }), err.message)
-  } finally {
     createAccountBtn.disabled = false
-    createAccountBtn.getElementsByClassName('t-create-account')[0].classList.remove('pulsate')
+    avatarIcon.classList.remove('invisible')
+    avatarNode.style.backgroundImage = 'none'
+    displayNameInput.value = ''
   }
-})
 
-const photoPickerBtn = document.querySelector('#\\/new-account button.photo-picker')
-const avatarNode = photoPickerBtn.querySelector(':scope > div:first-child')
-const avatarIcon = photoPickerBtn.getElementsByClassName('gg-girl')[0]
-photoPickerBtn.addEventListener('click', setPrivkeyAndAvatar)
+  router.addEventListener('routechange', e => {
+    if (e.detail.state.route !== '/new-account') return
+
+    router.addEventListener('routechange', onUnmout, { once: true })
+  })
+}
+
 async function setPrivkeyAndAvatar () {
+  const photoPickerBtn = document.querySelector('#\\/new-account button.photo-picker')
+  const avatarNode = photoPickerBtn.querySelector(':scope > div:first-child')
+  const avatarIcon = photoPickerBtn.getElementsByClassName('gg-girl')[0]
+
   photoPickerBtn.disabled = true
   currentPrivkey = generatePrivateKey()
   const url = window.encodeURIComponent(await getSvgAvatar(currentPrivkey))
@@ -45,24 +69,10 @@ async function setPrivkeyAndAvatar () {
   photoPickerBtn.disabled = false
 }
 
-const displayNameInput = document.getElementById('new-account-display-name')
-function onUnmout () {
-  currentPrivkey = null
-  currentPicture = null
-  createAccountBtn.disabled = false
-  avatarIcon.classList.remove('invisible')
-  avatarNode.style.backgroundImage = 'none'
-  displayNameInput.value = ''
-}
-router.addEventListener('routechange', e => {
-  if (e.detail.state.route !== '/new-account') return
-
-  router.addEventListener('routechange', onUnmout, { once: true })
-})
-
 async function createAccount (privkey) {
   let signer
   try {
+    const displayNameInput = document.getElementById('new-account-display-name')
     const displayName = displayNameInput.value.trim()
     if (!displayName) {
       throw new Error(t({ key: 'displayNameRequired' }))
@@ -130,4 +140,8 @@ async function createAccount (privkey) {
     if (signer) NostrSigner.revoke(signer)
     throw err
   }
+}
+
+export {
+  init
 }

@@ -10,40 +10,62 @@ import { showSuccessOverlay, showErrorOverlay, getRandomId } from 'helpers/misc.
 import { setAccountsState } from 'messenger'
 import { t } from 'translator'
 
-const nsecInput = document.getElementById('nsec-input')
-const toggleVisibilityBtn = document.getElementById('toggle-nsec-visibility')
-const addAccountBtn = document.querySelector('#\\/add-account-with-nsec button.add-account-with-nsec')
+let goBackTimeout = null
 
-// Toggle password visibility
-toggleVisibilityBtn.addEventListener('click', () => {
-  const isPassword = nsecInput.type === 'password'
-  nsecInput.type = isPassword ? 'text' : 'password'
+function init () {
+  const nsecInput = document.getElementById('nsec-input')
+  const toggleVisibilityBtn = document.getElementById('toggle-nsec-visibility')
+  const addAccountBtn = document.querySelector('#\\/add-account-with-nsec button.add-account-with-nsec')
 
-  const eyeIcon = toggleVisibilityBtn.querySelector('i')
-  eyeIcon.className = isPassword ? 'gg-eye-alt' : 'gg-eye'
-})
+  // Toggle password visibility
+  toggleVisibilityBtn.addEventListener('click', () => {
+    const isPassword = nsecInput.type === 'password'
+    nsecInput.type = isPassword ? 'text' : 'password'
 
-addAccountBtn.addEventListener('click', onButtonClick)
+    const eyeIcon = toggleVisibilityBtn.querySelector('i')
+    eyeIcon.className = isPassword ? 'gg-eye-alt' : 'gg-eye'
+  })
+
+  addAccountBtn.addEventListener('click', onButtonClick)
+
+  function onUnmount () {
+    clearTimeout(goBackTimeout)
+    clearInput()
+    enableButton()
+  }
+
+  router.addEventListener('routechange', e => {
+    if (e.detail.state.route !== '/add-account-with-nsec') return
+
+    router.addEventListener('routechange', onUnmount, { once: true })
+  })
+}
 
 function disableButton () {
+  const addAccountBtn = document.querySelector('#\\/add-account-with-nsec button.add-account-with-nsec')
   addAccountBtn.disabled = true
   addAccountBtn.getElementsByClassName('t-add-account-with-nsec-button')[0].classList.add('pulsate')
 }
 
 function enableButton () {
+  const addAccountBtn = document.querySelector('#\\/add-account-with-nsec button.add-account-with-nsec')
   addAccountBtn.disabled = false
   addAccountBtn.getElementsByClassName('t-add-account-with-nsec-button')[0].classList.remove('pulsate')
 }
 
 function clearInput () {
+  const nsecInput = document.getElementById('nsec-input')
+  const toggleVisibilityBtn = document.getElementById('toggle-nsec-visibility')
+
   nsecInput.value = ''
   nsecInput.type = 'password'
   const eyeIcon = toggleVisibilityBtn.querySelector('i')
   eyeIcon.className = 'gg-eye'
 }
 
-let goBackTimeout = null
 async function onButtonClick () {
+  const nsecInput = document.getElementById('nsec-input')
+
   disableButton()
 
   try {
@@ -152,14 +174,6 @@ async function onButtonClick () {
   enableButton()
 }
 
-function onUnmount () {
-  clearTimeout(goBackTimeout)
-  clearInput()
-  enableButton()
+export {
+  init
 }
-
-router.addEventListener('routechange', e => {
-  if (e.detail.state.route !== '/add-account-with-nsec') return
-
-  router.addEventListener('routechange', onUnmount, { once: true })
-})

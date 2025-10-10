@@ -7,7 +7,7 @@ function init () {
   successDismissBtns.forEach(btn => {
     btn.addEventListener('click', () => {
       hideSuccessOverlay()
-      router.goToRoute({ route: '/' })
+      router.goBack({ toRoot: true })
     })
   })
 
@@ -20,4 +20,6 @@ function init () {
   })
 }
 
-init()
+export {
+  init
+}

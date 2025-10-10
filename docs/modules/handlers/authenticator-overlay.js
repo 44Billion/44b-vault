@@ -56,9 +56,8 @@ async function maybeShowAuthenticatorOverlay () {
   if (!(await idb.hasLoggedInUsers())) showAuthenticatorOverlay()
 }
 
-init()
-
 export {
+  init,
   showAuthenticatorOverlay,
   hideAuthenticatorOverlay,
   maybeShowAuthenticatorOverlay

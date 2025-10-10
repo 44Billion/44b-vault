@@ -1,4 +1,4 @@
-function initHandlers () {
+async function initHandlers () {
   const handlers = [
     'header',
     'home',
@@ -12,7 +12,8 @@ function initHandlers () {
     'logout',
     'unlock-account'
   ]
-  return Promise.all(handlers.map(v => import(`./${v}.js`)))
+
+  return Promise.all(handlers.map(v => import(`./${v}.js`).then(({ init }) => init())))
 }
 
 export {

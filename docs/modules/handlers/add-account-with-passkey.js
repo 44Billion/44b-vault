@@ -10,20 +10,37 @@ import { showSuccessOverlay, showErrorOverlay, getRandomId } from 'helpers/misc.
 import { setAccountsState } from 'messenger'
 import { t } from 'translator'
 
-const loadAccountBtn = document.querySelector('#\\/add-account-with-passkey button.load-account')
-loadAccountBtn.addEventListener('click', onButtonClick)
+let goBackTimeout = null
+
+function init () {
+  const loadAccountBtn = document.querySelector('#\\/add-account-with-passkey button.load-account')
+  loadAccountBtn.addEventListener('click', onButtonClick)
+
+  function onUnmount () {
+    clearTimeout(goBackTimeout)
+    // Reset button state when leaving the route
+    enableButton()
+  }
+
+  router.addEventListener('routechange', e => {
+    if (e.detail.state.route !== '/add-account-with-passkey') return
+
+    router.addEventListener('routechange', onUnmount, { once: true })
+  })
+}
 
 function disableButton () {
+  const loadAccountBtn = document.querySelector('#\\/add-account-with-passkey button.load-account')
   loadAccountBtn.disabled = true
   loadAccountBtn.getElementsByClassName('t-load-account-button')[0].classList.add('pulsate')
 }
 
 function enableButton () {
+  const loadAccountBtn = document.querySelector('#\\/add-account-with-passkey button.load-account')
   loadAccountBtn.disabled = false
   loadAccountBtn.getElementsByClassName('t-load-account-button')[0].classList.remove('pulsate')
 }
 
-let goBackTimeout = null
 async function onButtonClick () {
   disableButton()
 
@@ -98,14 +115,6 @@ async function onButtonClick () {
   enableButton()
 }
 
-function onUnmount () {
-  clearTimeout(goBackTimeout)
-  // Reset button state when leaving the route
-  enableButton()
+export {
+  init
 }
-
-router.addEventListener('routechange', e => {
-  if (e.detail.state.route !== '/add-account-with-passkey') return
-
-  router.addEventListener('routechange', onUnmount, { once: true })
-})
