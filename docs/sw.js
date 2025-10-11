@@ -1,6 +1,6 @@
 // Any change to this file will reinstall sw. Remember to update version.
 const VERSION = '1'
-const APP_PREFIX = 'nostr-secure-login'
+const APP_PREFIX = '44b-vault'
 const CACHE_KEY = `${APP_PREFIX}:${VERSION}`
 const URLS_TO_PRECACHE = [
   './',

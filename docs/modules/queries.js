@@ -31,7 +31,9 @@ export async function getProfile (pubkey,
     profile = {
       name: `User#${getRandomId().slice(0, 5)}`,
       about: '',
-      picture: await _getSvgAvatar(pubkey),
+      picture: `data:image/svg+xml;charset=utf-8,${
+        window.encodeURIComponent(await _getSvgAvatar(pubkey))
+      }`,
       npub: npubEncode(pubkey),
       meta: {
         events: []
@@ -78,7 +80,9 @@ export async function eventToProfile (event, { _getSvgAvatar = getSvgAvatar } = 
         .filter(Boolean)
         .map(t => t[1]?.trim?.())[0] ||
       eventContent.picture?.trim?.() ||
-      await _getSvgAvatar(event.pubkey),
+      `data:image/svg+xml;charset=utf-8,${
+        window.encodeURIComponent(await _getSvgAvatar(event.pubkey))
+      }`,
     npub: npubEncode(event.pubkey),
     meta: {
       events: [event]

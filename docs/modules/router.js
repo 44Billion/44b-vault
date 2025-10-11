@@ -60,6 +60,8 @@ class Router extends EventTarget {
     window.addEventListener('popstate', e => {
       // this allow us to "change" state on back/forward/go
       const state = this.#nextState !== undefined ? { route: e.state.route, ...this.#nextState } : e.state
+      // Update current route when using browser navigation
+      if (state?.route) this.#currentRoute = state.route
       this.#emitRouteChangeEvent({ state })
     })
     this.addEventListener('routechange', this.#transitionPage.bind(this))
@@ -79,6 +81,8 @@ class Router extends EventTarget {
           route: currentRoute
         }
       }
+      // Update current route when determined from DOM
+      this.#currentRoute = currentRoute
     }
     this.dispatchEvent(new CustomEvent('routechange', { detail }))
   }
@@ -102,12 +106,19 @@ class Router extends EventTarget {
   #transitionPage () {
     const page = getQueryParam('page') || 0
     const oldHeight = document.getElementById('vault').getBoundingClientRect().height
-    const nextViewHeight = document.querySelector(`#page-${page} > div:not(.invisible)`).getBoundingClientRect().height
-    const diffViewHeight = nextViewHeight - document.getElementById('view').style.height.split('px')[0]
+    const nextViewElement = document.querySelector(`#page-${page} > div:not(.invisible)`)
+    if (!nextViewElement) {
+      console.warn('No visible element found for the current route:', this.#currentRoute)
+      return
+    }
+
+    const nextViewHeight = nextViewElement.getBoundingClientRect().height
+    const currentViewHeight = parseInt(document.getElementById('view').style.height.split('px')[0]) || 0
+    const diffViewHeight = nextViewHeight - currentViewHeight
     changeDimensions({ height: oldHeight + diffViewHeight })
 
     document.getElementById('pages').style.transform = `translateX(-${page * 100}%)`
-    document.getElementById('view').style.height = `${nextViewHeight}px`
+    if (nextViewHeight) document.getElementById('view').style.height = `${nextViewHeight}px`
   }
 
   #pushState (...args) {
@@ -127,13 +138,22 @@ class Router extends EventTarget {
   }
 
   #hopsFromRoot = 0
+  #currentRoute = '/'
+
   goToRoute ({ route, state, queryParams = {} }) {
     if (!(route in routes)) return
     if (route === '/') return this.goBack({ toRoot: true, state })
+    if (route === this.#currentRoute) return
+
+    const { page } = routes[route]
+    const currentPage = getQueryParam('page') || 0
+    if (parseInt(page) !== parseInt(currentPage)) this.#hopsFromRoot++
 
     state = { ...state, route }
-    this.#hopsFromRoot++
-    const { page } = routes[route]
+
+    // Update the current route
+    this.#currentRoute = route
+
     routesByPage[page].forEach(v => document.getElementById(v).classList[v === route ? 'remove' : 'add']('invisible'))
     queryParams = { ...queryParams, page }
     this.#pushState(state, '', `?${new URLSearchParams(queryParams)}`)
@@ -144,12 +164,12 @@ class Router extends EventTarget {
 
     const currentPage = getQueryParam('page')
     setTimeout(() => {
+      if (currentPage === getQueryParam('page')) return
       document.querySelector(`#page-${currentPage} > div:not(.invisible)`).classList.add('invisible')
     }, 300) // transition duration
 
     const next = toRoot ? -this.#hopsFromRoot : -1
     this.#hopsFromRoot = this.#hopsFromRoot + next
-
     // Don't try to predict the route - let #getCurrentRoute determine it after navigation
     this.#go(next, { state })
   }

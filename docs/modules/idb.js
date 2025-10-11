@@ -11,7 +11,7 @@ async function initDb (...args) {
     return db
   }))
 }
-function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
+function _initDb (dbName = '44b-vault', dbVersion = 1) {
   const req = indexedDB.open(dbName, dbVersion)
   // eslint-disable-next-line prefer-const, promise/param-names
   let resolve, reject, promise = new Promise((rs, rj) => { resolve = rs; reject = rj })
@@ -33,7 +33,14 @@ function _initDb (dbName = 'nostr-secure-login', dbVersion = 1) {
       {
         id, // auto; not the request id
         origin, // iframe parent, optional
-        appId, // delegator app, informed by delegatee, from +<fullAppId>
+        appId, // delegator app, informed by delegatee
+        // de-normalized for now
+        app: {
+          id, // +[+][+]..., tlv without relay hints, from +<fullAppId>
+          alias,
+          name,
+          icon: { fx, url }
+        },
         status, // success || failure
         ts,
         pubkey,
@@ -167,8 +174,8 @@ async function hasLoggedInUsers () {
   return run('openKeyCursor', [undefined, 'next'], 'accounts').then(v => !!v.result)
 }
 
-async function hasPermission (appId, eKind, name) {
-  if (!appId || eKind === undefined || !name) throw new Error('appId, eKind and name are required')
+async function hasPermission (appId, name, eKind) {
+  if (!appId || !name || eKind == null) throw new Error('appId, name and eKind are required')
   if (eKind === -1 /* wildcard */) {
     return run('get', [[appId, name, -1]], 'permissions').then(v => !!v.result)
   }

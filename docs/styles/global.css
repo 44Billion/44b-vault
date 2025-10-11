@@ -1,16 +1,18 @@
 :root {
-  color-scheme: dark light;
+  color-scheme: dark; /* dark light; */
 }
 
+/*
 @media (prefers-color-scheme: light) {
   html {
     filter: invert(1) hue-rotate(180deg);
   }
   img, video, iframe, svg, .photo-picker > .icon-wrapper {
-    /* inverts it back */
+    /* inverts it back
     filter: invert(1) hue-rotate(180deg);
   }
 }
+*/
 
 .invisible {
   display: none !important;
@@ -20,7 +22,7 @@ body {
   color: oklch(0.78 0 89.88);
 }
 
-body.vscode {
+body.dev {
   background-color: oklch(0.22 0 89.88) !important;
 }
 

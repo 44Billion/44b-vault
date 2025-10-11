@@ -21,17 +21,16 @@ await initDb()
     load(isntInIframe)
   } else {
     if (window.parent !== window.top) return
+
     const abortController = new AbortController()
     window.addEventListener('message', e => {
       if (
-        e.data?.code === 'RENDER' && (
-          config.isDev ||
-          e.origin === 'https://44billion.net'
-        )
-      ) {
-        load(isntInIframe)
-        abortController.abort()
-      }
+        e.data?.code !== 'RENDER' ||
+        !(config.isDev || e.origin === 'https://44billion.net')
+      ) return
+
+      load(isntInIframe)
+      abortController.abort()
     }, { signal: abortController.signal })
   }
 })()
@@ -47,7 +46,7 @@ async function showBody (isntInIframe) {
   if (isntInIframe) document.body.classList.add('detached')
   if (config.isDev) {
     console.log('[vault] config:', config)
-    document.body.classList.add('vscode')
+    document.body.classList.add('dev')
     // document.getElementById('view').style.transition = 'none'
     // document.getElementById('pages').style.transition = 'none'
   }

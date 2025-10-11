@@ -109,7 +109,7 @@ export default class NostrSigner {
 
       // empty app.id means it's a call meant for the napp browser itself
       if (app?.id) {
-        const permitted = await signer.#hasPermission(app.id, eventKind, method)
+        const permitted = await signer.#hasPermission(app.id, method, eventKind)
         if (!permitted) throw new Error('not-permitted: Not allowed to ' + method)
       }
 
@@ -150,10 +150,10 @@ export default class NostrSigner {
     nip44Encrypt: 'encrypt',
     nip44Decrypt: 'decrypt'
   }
-  #hasPermission (appId, eKind, name) {
+  #hasPermission (appId, name, eKind) {
     name = NostrSigner.methodNameToPermissionName[name]
     if (!name) throw new Error('internal-error: Unknown permission name ' + name)
-    return idb.hasPermission(appId, eKind, name)
+    return idb.hasPermission(appId, name, eKind)
   }
 
   getPublicKey () {

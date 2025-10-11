@@ -5,11 +5,12 @@ import NostrSigner from 'nostr-signer'
 import idb from 'idb'
 import { showSuccessOverlay, showErrorOverlay, getQueryParam } from 'helpers/misc.js'
 import { t } from 'translator'
-import { closeVaultView, setAccountsState } from 'messenger'
+import { setAccountsState } from 'messenger'
 
 let currentAccount = null
 let userPk = null
 let overlayAbortController = null
+let unlockReqId = 0
 
 function init () {
   const unlockAccountBtn = document.querySelector('#\\/unlock-account button.unlock-account')
@@ -19,8 +20,7 @@ function init () {
     unlockAccountBtn.disabled = true
 
     overlayAbortController = new AbortController()
-    document.getElementById('success-overlay').querySelector('button').addEventListener('click', closeVaultView, { signal: overlayAbortController.signal })
-    document.getElementById('error-overlay').querySelector('button').addEventListener('click', closeVaultView, { signal: overlayAbortController.signal })
+    const currentUnlockReqId = unlockReqId
     try {
       if (!currentAccount || !userPk) {
         throw new Error(t({ key: 'accountOrUserPubkeyNotFound' }))
@@ -30,6 +30,7 @@ function init () {
       const { success, privkey } = await reauthenticateWithPasskey(userPk, currentAccount.passkeyRawId)
 
       if (!success || !privkey) {
+        if (currentUnlockReqId !== unlockReqId) return
         throw new Error(t({ key: 'authenticationFailed' }))
       }
 
@@ -39,6 +40,7 @@ function init () {
 
       showSuccessOverlay(t({ key: 'accountUnlockedSuccessfully' }))
     } catch (err) {
+      if (currentUnlockReqId !== unlockReqId) return
       console.log(err)
       showErrorOverlay(t({ key: 'unlockAccountError' }))
     } finally {
@@ -57,9 +59,9 @@ function init () {
   router.addEventListener('routechange', async e => {
     if (e.detail.state.route !== '/unlock-account') return
 
+    ++unlockReqId
     // Get userPk from query parameter
     userPk = getQueryParam('userPk')
-    console.log('Unlocking account for userPk', userPk)
     if (!userPk) {
       showErrorOverlay(t({ key: 'unlockAccountError' }), t({ key: 'userPubkeyNotProvided' }))
       return

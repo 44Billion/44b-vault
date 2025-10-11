@@ -61,6 +61,10 @@ const locales = {
   displayNamePlaceholder: { en: 'My Nickname', pt: 'Meu Apelido', hasDomNode: true, domAttributes: ['placeholder'] },
   createAccount: { en: 'Create Account', pt: 'Criar Conta', hasDomNode: true },
   createAccountError: { en: 'Error creating account', pt: 'Erro ao criar conta' },
+  createAccountInIframeError: {
+    en: 'Creating account from inside an iframe may not work with some browser extensions. Please try again or use a different browser.',
+    pt: 'Criar conta de dentro de um iframe pode não funcionar com algumas extensões de navegador. Tente novamente ou use outro navegador.'
+  },
   displayNameRequired: { en: 'Name is required', pt: 'Nome é obrigatório' },
   // /lock
   nameAccountGroup: { en: 'Give a name to this account group:', pt: 'Dê um nome p/ este grupo de contas:', hasDomNode: true },

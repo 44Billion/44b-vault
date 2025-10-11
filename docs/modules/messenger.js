@@ -1,5 +1,5 @@
 import { config } from 'config'
-import { typeof2 } from 'helpers/misc.js'
+import { typeof2, hideSuccessOverlay, hideErrorOverlay } from 'helpers/misc.js'
 import { toAllCaps } from 'helpers/string.js'
 import { translateTo, t } from 'translator'
 import { router } from 'router'
@@ -58,19 +58,10 @@ export async function initMessenger () {
   }
 
   browserPort.addEventListener('message', async e => {
-    if (
-      (!config.isDev && e.origin !== 'https://44billion.net') ||
-      ['code', 'payload'].some(v => !(v in e.data)) ||
-      typeof2(e.data.payload) !== 'object' ||
-      !await browserPortPromise.catch(() => false)
-    ) return
+    if (!await browserPortPromise.catch(() => false)) return
 
     const { reqId } = e.data
     let resData
-    if (typeof2(reqId) !== 'string') {
-      const key = 'reqIdTypeError'
-      resData = { error: new Error(`${toAllCaps(key)}: ${t({ key })}`) }
-    }
 
     if (!resData) {
       switch (e.data.code) {
@@ -90,10 +81,16 @@ export async function initMessenger () {
             break
           }
 
-          // Navigate to the unlock-account route with the pubkey as query parameter
-          router.goToRoute({
-            route: '/unlock-account',
-            queryParams: { userPk: pubkey }
+          // If 'CLOSED_VAULT_VIEW' case is fixed, revert all that below with jist
+          // router.goToRoute({ route: '/unlock-account', queryParams: { userPk: pubkey } })
+          requestIdleCallback(() => {
+            router.goBack({ toRoot: true })
+            requestIdleCallback(() => requestIdleCallback(() => {
+              router.goToRoute({
+                route: '/unlock-account',
+                queryParams: { userPk: pubkey }
+              })
+            }))
           })
 
           // Send back a message indicating the route is ready
@@ -101,17 +98,45 @@ export async function initMessenger () {
           break
         }
         case 'CLOSED_VAULT_VIEW': {
+          // Keep it commentend for now.
+          // Because of how closed html dialogs work, atleast on Firefox,
+          // transitioning page while vault modal (dialog) is closed
+          // will make the container height 0 at
+          // docs/modules/router.js:105
+          // ```
+          // const nextViewHeight = document.querySelector(`#page-${page} > div:not(.invisible)`).getBoundingClientRect().height
+          // ```
+          //
+          // We will add a generic 'OPEN_VAULT_HOME' as a workaround
+          //
+          // router.goBack({ toRoot: true })
+          hideSuccessOverlay()
+          hideErrorOverlay()
+          return
+        }
+        // If 'CLOSED_VAULT_VIEW' case is fixed, delete this,
+        // also from browser side
+        case 'OPEN_VAULT_HOME': {
           router.goBack({ toRoot: true })
           return
         }
         case 'NIP07': {
           const { pubkey, method, params, app = {}, ns = [] } = e.data.payload
           const [nsName = '', ...nsParams] = ns
-          resData = await NostrSigner.run({ app, ns, pubkey, method, params })
+          resData = await NostrSigner.run({
+            app: {
+              ...app,
+              // For now, nip07 calls are always from browser itself, not from apps
+              id: null
+            },
+            ns, pubkey, method, params
+          })
 
           idb.appendLog({
             origin: e.origin, // iframe parent
-            app, // may be delegating
+            appId: app.id ?? '', // may be delegating
+            // maybe normalize this (debounced) to apps store
+            app,
             status: resData.error ? 'failure' : 'success',
             ts: Math.floor(Date.now() / 1000),
             ns: { name: nsName, params: nsParams },
@@ -135,11 +160,15 @@ export async function initMessenger () {
       }
     }
 
+    if (typeof2(reqId) !== 'string') {
+      const key = 'reqIdTypeError'
+      resData = { error: new Error(`${toAllCaps(key)}: ${t({ key })}`) }
+    }
     browserPort.postMessage({
       reqId: e.data.reqId,
       code: 'REPLY',
       ...resData // { ?payload, ?error }
-    }, e.origin)
+    })
   })
   browserPort.start()
   await tellBrowserImReady()

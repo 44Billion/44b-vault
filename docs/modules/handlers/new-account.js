@@ -121,8 +121,17 @@ async function createAccount (privkey) {
     try {
       ({ passkeyRawId } = await storeAccountPrivkeyInSecureElement({ privkey, displayName }))
     } catch (err) {
+      let errorMessage
+      // This detects an error that can sometimes happen when calling
+      // navigator.credentials.create() from inside an iframe,
+      // e.g. on Chrome if Bitwarden extension is unlocked
+      // See https://github.com/bitwarden/clients/issues/12590
+      if (
+        err.message?.includes("Invalid 'sameOriginWithAncestors' value")
+      ) errorMessage = t({ key: 'createAccountInIframeError' })
+      else errorMessage = 'SECURE_ELEMENT_STORE_ERROR'
       console.error(err)
-      throw new Error('SECURE_ELEMENT_STORE_ERROR')
+      throw new Error(errorMessage)
     }
     try {
       await idb.createOrUpdateAccount({

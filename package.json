@@ -30,8 +30,8 @@
     "build:nostr": "node --import ./register-import-map.js build/esbuild.js",
     "sync-import-map": "node sync-import-map.js",
     "build": "npm run build:nostr && npm run sync-import-map",
-    "start": "cd docs && python3 -m http.server",
-    "end": "pkill -f 'python3 -m http.server'"
+    "start": "python3 server.py",
+    "end": "pkill -f 'python3 server.py'"
   },
   "devDependencies": {
     "@noble/curves": "^2.0.1",
