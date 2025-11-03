@@ -1,12 +1,13 @@
 import { initDb } from 'idb'
 import { initSw } from 'sw-manager'
-import { initConfig, config } from 'config'
+import { polyfill, initConfig, config } from 'config'
 import { initTranslation } from 'translator'
 import { initMessenger, changeDimensions } from 'messenger'
 import { initHandlers } from 'handlers'
 import { getQueryParam } from 'helpers/misc.js'
 import { maybeShowAuthenticatorOverlay } from 'handlers/authenticator-overlay.js'
 
+polyfill()
 // await initSw({ swUpdateReadyHandler })
 await initConfig()
 await initDb()
