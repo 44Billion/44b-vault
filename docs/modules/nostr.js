@@ -6785,11 +6785,12 @@ var v2 = {
 };
 
 // nostr/nip44.js
+var encoder = new TextEncoder();
 function getConversationKey2(privkeyA, pubkeyB, salt) {
   salt ??= "nip44-v2";
   if (salt.length > 32) throw new Error("invalid salt length");
-  const sharedX = secp256k12.getSharedSecret(privkeyA, "02" + pubkeyB).subarray(1, 33);
-  return extract(sha2563, sharedX, salt);
+  const sharedX = secp256k12.getSharedSecret(privkeyA, hexToBytes3("02" + pubkeyB)).subarray(1, 33);
+  return extract(sha2563, sharedX, encoder.encode(salt));
 }
 var nip44 = {
   encrypt: v2.encrypt,

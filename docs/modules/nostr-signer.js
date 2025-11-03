@@ -169,11 +169,11 @@ export default class NostrSigner {
   }
 
   nip04Encrypt (peerPubkey, plaintext) {
-    return nip04Encrypt(this.#privkey, hexToBytes(peerPubkey), plaintext)
+    return nip04Encrypt(this.#privkey /* bytes */, peerPubkey /* hex */, plaintext)
   }
 
   nip04Decrypt (peerPubkey, ciphertext) {
-    return nip04Decrypt(this.#privkey, hexToBytes(peerPubkey), ciphertext)
+    return nip04Decrypt(this.#privkey /* bytes */, peerPubkey /* hex */, ciphertext)
   }
 
   #scheduleConversationKeyGc () {
@@ -187,7 +187,7 @@ export default class NostrSigner {
     salt ??= 'nip44-v2'
     const cacheKey = `${this.#pubkey}+${peerPubkey}+${salt}`
     const ck = this.#conversationKeys[cacheKey] ??=
-      nip44GetConversationKey(this.#privkey, hexToBytes(peerPubkey), salt)
+      nip44GetConversationKey(this.#privkey /* bytes */, peerPubkey /* hex */, salt)
     return nip44Encrypt(plaintext, ck)
   }
 
@@ -195,7 +195,7 @@ export default class NostrSigner {
     salt ??= 'nip44-v2'
     const cacheKey = `${this.#pubkey}+${peerPubkey}+${salt}`
     const ck = this.#conversationKeys[cacheKey] ??=
-      nip44GetConversationKey(this.#privkey, hexToBytes(peerPubkey), salt)
+      nip44GetConversationKey(this.#privkey /* bytes */, peerPubkey /* hex */, salt)
     return nip44Decrypt(ciphertext, ck)
   }
 }
