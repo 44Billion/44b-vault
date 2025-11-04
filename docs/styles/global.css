@@ -57,8 +57,8 @@ input {
   background-color: oklch(0.19 0 89.88);
   color: oklch(0.78 0 89.88);
   border: 0;
-  height: 30rem;
-  font-size: 410px;
+  height: 30px; /* 30rem height won't be 30px on Safari 17.6 but 270px; use rem unit just for font-size */
+  font-size: 16rem;
   border-radius: 7px;
   padding: 14px 10px;
 }
