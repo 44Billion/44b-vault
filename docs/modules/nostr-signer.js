@@ -44,8 +44,9 @@ export default class NostrSigner {
   // This also caches the privkey on memory
   // to avoid asking user to unlock with passkey
   // the next time we need to sign/encrypt things
-  static getOrCreate (privkey) {
+  static getOrCreate (privkey, { cache = true } = {}) {
     if (!privkey) throw new Error('Missing privkey arg.')
+    if (!cache) return new this(createToken, privkey)
     return (this.#nostrSignersByPubkey[getPublicKey(privkey)] ??= new this(createToken, privkey))
   }
 

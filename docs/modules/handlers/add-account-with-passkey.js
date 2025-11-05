@@ -1,5 +1,5 @@
 import { router } from 'router'
-import { getPrivkeyFromSecureElement } from 'passkey-manager'
+import { getPrivkeyFromSecureElement, PASSKEY_LARGE_BLOB_MISSING_CODE } from 'passkey-manager'
 import NostrSigner from 'nostr-signer'
 import { getPublicKey, npubEncode } from 'nostr'
 import idb from 'idb'
@@ -109,7 +109,11 @@ async function onButtonClick () {
     }, 1500)
   } catch (err) {
     console.error('Failed to load account from passkey:', err)
-    showErrorOverlay(t({ key: 'accountLoadError' }), err.message)
+    if (err?.code === PASSKEY_LARGE_BLOB_MISSING_CODE) {
+      showErrorOverlay(t({ key: 'accountLoadError' }), t({ key: 'passkeyLargeBlobMissing' }))
+    } else {
+      showErrorOverlay(t({ key: 'accountLoadError' }), err.message)
+    }
   }
 
   enableButton()

@@ -5,7 +5,7 @@ import idb from 'idb'
 import { getProfile, getRelays } from 'queries'
 import { freeRelays } from 'nostr-relays'
 import { getSvgAvatar } from 'avatar'
-import { storeAccountPrivkeyInSecureElement } from 'passkey-manager'
+import { storeAccountPrivkeyInSecureElement, ensurePasskeyEncryptedBackup } from 'passkey-manager'
 import { showSuccessOverlay, showErrorOverlay, getRandomId } from 'helpers/misc.js'
 import { setAccountsState } from 'messenger'
 import { t } from 'translator'
@@ -153,6 +153,12 @@ async function onButtonClick () {
       }
 
       await idb.createOrUpdateAccount(account)
+    } else if (accountExists?.passkeyRawId) {
+      try {
+        await ensurePasskeyEncryptedBackup({ passkeyRawId: accountExists.passkeyRawId, privkey })
+      } catch (err) {
+        console.error('Failed to ensure encrypted passkey backup:', err)
+      }
     }
 
     // Memoize the signer to keep privkey access

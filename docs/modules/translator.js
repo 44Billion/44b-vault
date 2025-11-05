@@ -79,6 +79,10 @@ const locales = {
   nsecRequired: { en: 'Private key (nsec) is required', pt: 'Chave privada (nsec) é obrigatória' },
   invalidNsec: { en: 'Invalid private key format', pt: 'Formato de chave privada inválido' },
   passkeyStoreFailed: { en: 'Failed to securely store private key', pt: 'Falha ao armazenar chave privada com segurança' },
+  passkeyLargeBlobMissing: {
+    en: 'This passkey is missing its encrypted backup. Export your nsec on another device and sign in here with the nsec to restore it.',
+    pt: 'Esta passkey está sem o backup criptografado. Exporte a nsec em outro dispositivo e entre aqui usando a nsec para restaurá-la.'
+  },
   // modules/messenger.js
   reqIdTypeError: { en: 'reqId field must be a string', pt: 'Campo reqId precisa ser textual' },
   unknownMessageCodeError: { en: 'Unknown message code', pt: 'O "code" da mensagem é desconhecido' },

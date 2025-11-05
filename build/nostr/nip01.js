@@ -4,8 +4,9 @@ import { sha256 } from '@noble/hashes/sha2.js'
 import { bytesToHex, hexToBytes } from 'helpers/misc.js'
 
 // https://github.com/paulmillr/noble-secp256k1/blob/b032053763c0d4ba107c18fee28344f64242b075/index.js#L457
-export function generatePrivateKey () {
-  const randomBytes = crypto.getRandomValues(new Uint8Array(40))
+export function generatePrivateKey (options = {}) {
+  const { seedBytes } = options
+  const randomBytes = seedBytes ? new Uint8Array(seedBytes) : crypto.getRandomValues(new Uint8Array(40))
   const B256 = 2n ** 256n // secp256k1 is short weierstrass curve
   const N = B256 - 0x14551231950b75fc4402da1732fc9bebfn // curve (group) order
   const bytesToNumber = b => BigInt('0x' + (bytesToHex(b) || '0'))
@@ -15,7 +16,9 @@ export function generatePrivateKey () {
 }
 
 export function getPublicKey (privkey) {
-  return getPublicKeyFromUint8Array(privkey)
+  const privkeyBytes = typeof privkey === 'string' ? hexToBytes(privkey) : privkey
+  const pubkey = getPublicKeyFromUint8Array(privkeyBytes)
+  return typeof pubkey === 'string' ? pubkey : bytesToHex(pubkey)
 }
 
 function serializeEvent (event) {

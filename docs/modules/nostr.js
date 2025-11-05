@@ -4713,8 +4713,9 @@ var schnorr2 = /* @__PURE__ */ (() => {
 
 // nostr/nip01.js
 import { bytesToHex as bytesToHex4, hexToBytes as hexToBytes4 } from "helpers/misc.js";
-function generatePrivateKey() {
-  const randomBytes4 = crypto.getRandomValues(new Uint8Array(40));
+function generatePrivateKey(options = {}) {
+  const { seedBytes } = options;
+  const randomBytes4 = seedBytes ? new Uint8Array(seedBytes) : crypto.getRandomValues(new Uint8Array(40));
   const B256 = 2n ** 256n;
   const N = B256 - 0x14551231950b75fc4402da1732fc9bebfn;
   const bytesToNumber = (b) => BigInt("0x" + (bytesToHex4(b) || "0"));
@@ -4726,7 +4727,9 @@ function generatePrivateKey() {
   return num2.toString(16).padStart(64, "0");
 }
 function getPublicKey2(privkey) {
-  return getPublicKey(privkey);
+  const privkeyBytes = typeof privkey === "string" ? hexToBytes4(privkey) : privkey;
+  const pubkey = getPublicKey(privkeyBytes);
+  return typeof pubkey === "string" ? pubkey : bytesToHex4(pubkey);
 }
 function serializeEvent2(event) {
   return JSON.stringify([
