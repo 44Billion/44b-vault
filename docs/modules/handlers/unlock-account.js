@@ -1,6 +1,6 @@
 import { getSvgAvatar } from 'avatar'
 import { router } from 'router'
-import { reauthenticateWithPasskey } from 'passkey-manager'
+import { reauthenticateWithPasskey, PASSKEY_PRF_MISSING_CODE } from 'passkey-manager'
 import NostrSigner from 'nostr-signer'
 import idb from 'idb'
 import { showSuccessOverlay, showErrorOverlay, getQueryParam } from 'helpers/misc.js'
@@ -42,7 +42,11 @@ function init () {
     } catch (err) {
       if (currentUnlockReqId !== unlockReqId) return
       console.log(err)
-      showErrorOverlay(t({ key: 'unlockAccountError' }))
+      if (err?.code === PASSKEY_PRF_MISSING_CODE) {
+        showErrorOverlay(t({ key: 'unlockAccountError' }), t({ key: 'passkeyPrfMissing' }))
+      } else {
+        showErrorOverlay(t({ key: 'unlockAccountError' }))
+      }
     } finally {
       unlockAccountBtn.disabled = false
     }

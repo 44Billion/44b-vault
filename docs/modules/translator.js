@@ -83,6 +83,10 @@ const locales = {
     en: 'This passkey is missing its encrypted backup. Export your nsec on another device and sign in here with the nsec to restore it.',
     pt: 'Esta passkey está sem o backup criptografado. Exporte a nsec em outro dispositivo e entre aqui usando a nsec para restaurá-la.'
   },
+  passkeyPrfMissing: {
+    en: 'This passkey is missing the data required to unlock it. Sign in with your nsec on another device and add the account here using the nsec to restore it.',
+    pt: 'Esta passkey está sem os dados necessários para destravá-la. Entre com a nsec em outro dispositivo e adicione a conta aqui usando a nsec para restaurá-la.'
+  },
   // modules/messenger.js
   reqIdTypeError: { en: 'reqId field must be a string', pt: 'Campo reqId precisa ser textual' },
   unknownMessageCodeError: { en: 'Unknown message code', pt: 'O "code" da mensagem é desconhecido' },

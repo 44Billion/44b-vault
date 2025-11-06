@@ -118,8 +118,9 @@ async function createAccount (privkey) {
       throw new Error('PROFILE_EVENT_SEND_ERROR')
     }
     let passkeyRawId
+    let prf
     try {
-      ({ passkeyRawId } = await storeAccountPrivkeyInSecureElement({ privkey, displayName }))
+      ({ passkeyRawId, prf } = await storeAccountPrivkeyInSecureElement({ privkey, displayName }))
     } catch (err) {
       let errorMessage
       // This detects an error that can sometimes happen when calling
@@ -137,6 +138,7 @@ async function createAccount (privkey) {
       await idb.createOrUpdateAccount({
         pubkey: signer.getPublicKey(),
         passkeyRawId,
+        ...(prf?.length ? { prf } : {}),
         profile: await eventToProfile(profileEvent, { _getSvgAvatar: getSvgAvatar }),
         relays: eventToRelays(relaysEvent)
       })

@@ -1,6 +1,6 @@
 import idb from 'idb'
 import { getSvgAvatar } from 'avatar'
-import { reauthenticateWithPasskey } from 'passkey-manager'
+import { reauthenticateWithPasskey, PASSKEY_PRF_MISSING_CODE } from 'passkey-manager'
 import { npubEncode, nsecEncode } from 'nostr'
 import { t } from 'translator'
 import { router } from 'router'
@@ -208,7 +208,9 @@ async function copyNsec (account) {
   } catch (error) {
     console.error('Error copying nsec:', error)
 
-    if (error.message?.includes('authentication') || error.name?.includes('NotAllowed')) {
+    if (error?.code === PASSKEY_PRF_MISSING_CODE) {
+      showErrorOverlay(t({ key: 'nsecCopyError' }), t({ key: 'passkeyPrfMissing' }))
+    } else if (error.message?.includes('authentication') || error.name?.includes('NotAllowed')) {
       showErrorOverlay(t({ key: 'authenticationFailedDueToInactivity' }))
     } else {
       showErrorOverlay(t({ key: 'nsecCopyError' }))

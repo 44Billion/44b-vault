@@ -100,6 +100,7 @@ async function onButtonClick () {
     const accountExists = await idb.getAccountByPubkey(pubkey)
     if (!accountExists) {
       let passkeyRawId
+      let prf
       let profile, relays
 
       try {
@@ -125,7 +126,7 @@ async function onButtonClick () {
 
       try {
         // Store the private key as a passkey using the profile name
-        ({ passkeyRawId } = await storeAccountPrivkeyInSecureElement({
+        ({ passkeyRawId, prf } = await storeAccountPrivkeyInSecureElement({
           privkey,
           displayName: profile.name
         }))
@@ -138,6 +139,7 @@ async function onButtonClick () {
       const account = {
         pubkey,
         passkeyRawId,
+        ...(prf?.length ? { prf } : {}),
         profile: {
           name: profile.name,
           about: profile.about,

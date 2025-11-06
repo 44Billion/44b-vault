@@ -88,6 +88,24 @@ function _initDb (dbName = '44b-vault', dbVersion = 1) {
   return promise
 }
 
+function toUint8Array (value) {
+  if (!value) return null
+  if (value instanceof Uint8Array) return value
+  if (value instanceof ArrayBuffer) return new Uint8Array(value)
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+  return null
+}
+
+function areUint8ArraysEqual (a, b) {
+  const left = toUint8Array(a)
+  const right = toUint8Array(b)
+  if (!left || !right || left.length !== right.length) return false
+  for (let i = 0; i < left.length; i++) {
+    if (left[i] !== right[i]) return false
+  }
+  return true
+}
+
 async function run (method, args = [], storeName, indexName, { p = Promise.withResolvers(), tx, txMode = tx?.mode, storeOrIndex } = {}) {
   if (!tx) {
     const db = await _initDb()
@@ -160,6 +178,13 @@ async function getAccountByPubkey (pubkey) {
   return run('get', [pubkey], 'accounts').then(v => v.result)
 }
 
+async function getAccountByPasskeyRawId (rawId) {
+  const target = toUint8Array(rawId)
+  if (!target) return null
+  const accounts = await getAllAccounts()
+  return accounts.find(account => areUint8ArraysEqual(account?.passkeyRawId, target)) ?? null
+}
+
 async function getAllAccounts () {
   return run('getAll', [], 'accounts').then(v => v.result)
 }
@@ -201,6 +226,7 @@ Object.assign(idb, {
   run,
   createOrUpdateAccount,
   getAccountByPubkey,
+  getAccountByPasskeyRawId,
   getAllAccounts,
   deleteAccountByPubkey,
   hasLoggedInUsers,

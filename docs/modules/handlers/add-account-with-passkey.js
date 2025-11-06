@@ -1,5 +1,5 @@
 import { router } from 'router'
-import { getPrivkeyFromSecureElement, PASSKEY_LARGE_BLOB_MISSING_CODE } from 'passkey-manager'
+import { getPrivkeyFromSecureElement, PASSKEY_LARGE_BLOB_MISSING_CODE, PASSKEY_PRF_MISSING_CODE } from 'passkey-manager'
 import NostrSigner from 'nostr-signer'
 import { getPublicKey, npubEncode } from 'nostr'
 import idb from 'idb'
@@ -11,6 +11,24 @@ import { setAccountsState } from 'messenger'
 import { t } from 'translator'
 
 let goBackTimeout = null
+
+function toUint8Array (value) {
+  if (!value) return null
+  if (value instanceof Uint8Array) return value
+  if (value instanceof ArrayBuffer) return new Uint8Array(value)
+  if (ArrayBuffer.isView(value)) return new Uint8Array(value.buffer, value.byteOffset, value.byteLength)
+  return null
+}
+
+function areUint8ArraysEqual (a, b) {
+  const left = toUint8Array(a)
+  const right = toUint8Array(b)
+  if (!left || !right || left.length !== right.length) return false
+  for (let i = 0; i < left.length; i++) {
+    if (left[i] !== right[i]) return false
+  }
+  return true
+}
 
 function init () {
   const loadAccountBtn = document.querySelector('#\\/add-account-with-passkey button.load-account')
@@ -46,7 +64,7 @@ async function onButtonClick () {
 
   try {
     // Get private key from secure element
-    const { passkeyRawId, privkey } = await getPrivkeyFromSecureElement()
+    const { passkeyRawId, privkey, prf } = await getPrivkeyFromSecureElement()
     const pubkey = getPublicKey(privkey)
 
     // Check if account already exists in idb
@@ -60,6 +78,7 @@ async function onButtonClick () {
         const account = {
           pubkey,
           passkeyRawId,
+          ...(prf?.length ? { prf } : {}),
           profile: {
             name: profile.name,
             about: profile.about,
@@ -80,6 +99,7 @@ async function onButtonClick () {
         const account = {
           pubkey,
           passkeyRawId,
+          ...(prf?.length ? { prf } : {}),
           profile: {
             name: `User#${getRandomId().slice(0, 5)}`,
             about: '',
@@ -94,6 +114,16 @@ async function onButtonClick () {
           }
         }
         await idb.createOrUpdateAccount(account)
+      }
+    } else {
+      const needsPrfUpdate = prf?.length && !toUint8Array(accountExists.prf)?.length
+      const passkeyChanged = passkeyRawId?.length && !areUint8ArraysEqual(accountExists.passkeyRawId, passkeyRawId)
+      if (needsPrfUpdate || passkeyChanged) {
+        await idb.createOrUpdateAccount({
+          ...accountExists,
+          passkeyRawId: passkeyChanged ? passkeyRawId : accountExists.passkeyRawId,
+          ...(needsPrfUpdate ? { prf } : {})
+        })
       }
     }
 
@@ -111,6 +141,8 @@ async function onButtonClick () {
     console.error('Failed to load account from passkey:', err)
     if (err?.code === PASSKEY_LARGE_BLOB_MISSING_CODE) {
       showErrorOverlay(t({ key: 'accountLoadError' }), t({ key: 'passkeyLargeBlobMissing' }))
+    } else if (err?.code === PASSKEY_PRF_MISSING_CODE) {
+      showErrorOverlay(t({ key: 'accountLoadError' }), t({ key: 'passkeyPrfMissing' }))
     } else {
       showErrorOverlay(t({ key: 'accountLoadError' }), err.message)
     }

@@ -1,5 +1,6 @@
 import { npubEncode, getPublicKey, generatePrivateKey } from 'nostr'
 import { getProfile } from 'queries'
+import idb from 'idb'
 import { bytesToHex, hexToBytes } from 'helpers/misc.js'
 import { t } from 'translator'
 import NostrSigner from 'nostr-signer'
@@ -38,6 +39,7 @@ const DEFAULT_TRANSPORTS = [
   'internal' // locally created passkeys
 ]
 const PASSKEY_LARGE_BLOB_MISSING_CODE = 'passkey-largeblob-missing'
+const PASSKEY_PRF_MISSING_CODE = 'passkey-prf-missing'
 
 function toHex (value) {
   if (!value) return ''
@@ -181,7 +183,7 @@ async function storeAccountPrivkeyInSecureElement ({ privkey, displayName }) {
     throw new Error(t({ key: 'passkeyStoreFailed' }))
   }
 
-  return { passkeyRawId }
+  return { passkeyRawId, prf: prfBytes }
 }
 
 // User will pick which session because of residentKey=required when creating passkey
@@ -207,9 +209,19 @@ async function getPrivkeyFromSecureElement () {
 
   if (!credential) throw new Error(t({ key: 'accountLoadError' }))
 
+  const passkeyRawId = new Uint8Array(credential.rawId)
   const extensions = extractExtensions(credential)
-  const prfBytes = extractPrfBytes(extensions)
-  if (!prfBytes?.length) throw new Error(t({ key: 'accountLoadError' }))
+  let prfBytes = extractPrfBytes(extensions)
+  if (!prfBytes?.length) {
+    const account = await idb.getAccountByPasskeyRawId(passkeyRawId)
+    const storedPrf = bufferSourceToUint8Array(account?.prf)
+    if (storedPrf?.length) prfBytes = storedPrf
+  }
+  if (!prfBytes?.length) {
+    const err = new Error(t({ key: 'passkeyPrfMissing' }))
+    err.code = PASSKEY_PRF_MISSING_CODE
+    throw err
+  }
 
   const blobBytes = extractLargeBlobBytes(extensions)
   if (!blobBytes) {
@@ -242,7 +254,7 @@ async function getPrivkeyFromSecureElement () {
     await storeAccountPrivkeyInSecureElement({ privkey, displayName: clonedDisplayName })
   }
 
-  return { passkeyRawId: new Uint8Array(credential.rawId), privkey }
+  return { passkeyRawId, privkey, prf: prfBytes }
 }
 
 // Do this to confirm a sensitive operation
@@ -273,9 +285,19 @@ async function reauthenticateWithPasskey (pubkey, rawId) {
   })
 
   const extensions = extractExtensions(credential)
-  const prfBytes = extractPrfBytes(extensions)
+  let prfBytes = extractPrfBytes(extensions)
+  if (!prfBytes?.length) {
+    const account = await idb.getAccountByPubkey(pubkey)
+    const storedPrf = bufferSourceToUint8Array(account?.prf)
+    if (storedPrf?.length) prfBytes = storedPrf
+  }
   const blobBytes = extractLargeBlobBytes(extensions)
-  if (!prfBytes?.length || !blobBytes) {
+  if (!prfBytes?.length) {
+    const err = new Error(t({ key: 'passkeyPrfMissing' }))
+    err.code = PASSKEY_PRF_MISSING_CODE
+    throw err
+  }
+  if (!blobBytes) {
     return { success: false, privkey: null, rawPrivkey: null }
   }
 
@@ -354,5 +376,6 @@ export {
   getPrivkeyFromSecureElement,
   reauthenticateWithPasskey,
   ensurePasskeyEncryptedBackup,
-  PASSKEY_LARGE_BLOB_MISSING_CODE
+  PASSKEY_LARGE_BLOB_MISSING_CODE,
+  PASSKEY_PRF_MISSING_CODE
 }
