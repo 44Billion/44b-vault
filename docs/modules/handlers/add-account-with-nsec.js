@@ -128,7 +128,8 @@ async function onButtonClick () {
         // Store the private key as a passkey using the profile name
         ({ passkeyRawId, prf } = await storeAccountPrivkeyInSecureElement({
           privkey,
-          displayName: profile.name
+          displayName: profile.name,
+          writeRelays: relays?.write
         }))
       } catch (err) {
         console.error('Failed to store private key as passkey:', err)

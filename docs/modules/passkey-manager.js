@@ -1,18 +1,19 @@
 import { npubEncode, getPublicKey, generatePrivateKey } from 'nostr'
-import { getProfile } from 'queries'
+import { getProfile, getPasskeyFallbackEvent } from 'queries'
 import idb from 'idb'
+import nostrRelays, { freeRelays } from 'nostr-relays'
 import { bytesToHex, hexToBytes } from 'helpers/misc.js'
 import { t } from 'translator'
 import NostrSigner from 'nostr-signer'
 
 // Notes:
-// - We now store the Nostr private key encrypted inside the passkey large-blob
+// - We store the Nostr private key encrypted inside the passkey large-blob
 //   extension, using a deterministic key derived from the PRF extension so we
 //   never persist the private key in clear text inside the passkey metadata.
 // - The passkey user handle (`user.id`) stores the public key so that a synced
 //   passkey can still be identified across devices without leaking the private key.
 // - Some authenticators/browsers may require multiple prompts: one for the
-//   passkey assertion and another for writing the large blob payload.
+//   passkey registrarion and another for writing the large blob payload.
 // - There is currently no way to ask for a credential deletion (user does it manually).
 //   In the future, use PublicKeyCredential.signalAllAcceptedCredentials()
 //   https://www.w3.org/TR/webauthn-3/#sctn-terminology:~:text=NOTE%3A%20Authenticators%20might%20not%20be%20attached%20at%20the%20time%20signalAllAcceptedCredentials(options)%20is%20executed.%20Therefore%2C%20WebAuthn%20Relying%20Parties%20may%20choose%20to%20run%20signalAllAcceptedCredentials(options)%20periodically%2C%20e.g.%20on%20every%20sign%20in.
@@ -89,7 +90,7 @@ function base64UrlEncode (value) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
-async function writePasskeyLargeBlob (rawId, ciphertext) {
+async function writePasskeyLargeBlob (rawId, ciphertext, { privkey, writeRelays } = {}) {
   const descriptor = createAllowCredentialDescriptor(rawId)
   if (!descriptor) throw new Error('invalid-passkey')
   const challenge = crypto.getRandomValues(new Uint8Array(32))
@@ -109,11 +110,36 @@ async function writePasskeyLargeBlob (rawId, ciphertext) {
   })
   const extensions = credential?.getClientExtensionResults?.() ?? {}
   if (!extensions.largeBlob?.written) {
-    throw new Error('passkey-largeblob-write-failed')
+    if (!privkey) throw new Error('passkey-largeblob-write-failed')
+    const signer = NostrSigner.getOrCreate(privkey)
+    const passkeyId = base64UrlEncode(descriptor.id)
+    const fallbackEvent = signer.signEvent({
+      kind: 34952,
+      created_at: Math.floor(Date.now() / 1000),
+      tags: [['d', passkeyId]],
+      content: ciphertext
+    })
+    let relaysToSend = []
+    if (Array.isArray(writeRelays) && writeRelays.length) relaysToSend = writeRelays
+    else {
+      try {
+        const relays = await signer.getRelays()
+        if (relays?.write?.length) relaysToSend = relays.write
+      } catch (err) {
+        console.error('Failed to resolve write relays for passkey fallback event:', err)
+      }
+    }
+    const uniqueRelays = [...new Set([...(relaysToSend || []), ...freeRelays])].filter(Boolean)
+    if (!uniqueRelays.length) throw new Error('passkey-largeblob-write-failed')
+    const { success, errors } = await nostrRelays.sendEvent(fallbackEvent, uniqueRelays)
+    if (!success) {
+      console.error(errors.map(({ relay, reason }) => `${relay}: ${reason}`).join('\n'))
+      throw new Error('passkey-largeblob-write-failed')
+    }
   }
 }
 
-async function storeAccountPrivkeyInSecureElement ({ privkey, displayName }) {
+async function storeAccountPrivkeyInSecureElement ({ privkey, displayName, writeRelays } = {}) {
   displayName = displayName?.trim?.() ?? ''
 
   const derivedPubkey = getPublicKey(privkey)
@@ -178,7 +204,7 @@ async function storeAccountPrivkeyInSecureElement ({ privkey, displayName }) {
   const passkeyRawId = new Uint8Array(credential.rawId)
 
   try {
-    await writePasskeyLargeBlob(passkeyRawId, ciphertext)
+    await writePasskeyLargeBlob(passkeyRawId, ciphertext, { privkey, writeRelays })
   } catch (_err) {
     throw new Error(t({ key: 'passkeyStoreFailed' }))
   }
@@ -210,10 +236,13 @@ async function getPrivkeyFromSecureElement () {
   if (!credential) throw new Error(t({ key: 'accountLoadError' }))
 
   const passkeyRawId = new Uint8Array(credential.rawId)
+  const storedUserHandle = bufferSourceToUint8Array(credential.response.userHandle)
+  const storedPubkeyHex = toHex(storedUserHandle)
   const extensions = extractExtensions(credential)
   let prfBytes = extractPrfBytes(extensions)
+  let account = null
   if (!prfBytes?.length) {
-    const account = await idb.getAccountByPasskeyRawId(passkeyRawId)
+    account = await idb.getAccountByPasskeyRawId(passkeyRawId)
     const storedPrf = bufferSourceToUint8Array(account?.prf)
     if (storedPrf?.length) prfBytes = storedPrf
   }
@@ -224,10 +253,23 @@ async function getPrivkeyFromSecureElement () {
   }
 
   const blobBytes = extractLargeBlobBytes(extensions)
-  if (!blobBytes) {
-    const err = new Error(t({ key: 'passkeyLargeBlobMissing' }))
-    err.code = PASSKEY_LARGE_BLOB_MISSING_CODE
-    throw err
+  let ciphertext
+  if (blobBytes) {
+    ciphertext = textDecoder.decode(blobBytes)
+  } else {
+    if (!account) account = await idb.getAccountByPasskeyRawId(passkeyRawId)
+    const passkeyId = base64UrlEncode(passkeyRawId)
+    const fallbackEvent = await getPasskeyFallbackEvent({
+      pubkey: storedPubkeyHex,
+      passkeyId,
+      relays: account?.relays?.write
+    })
+    if (!fallbackEvent?.content) {
+      const err = new Error(t({ key: 'passkeyLargeBlobMissing' }))
+      err.code = PASSKEY_LARGE_BLOB_MISSING_CODE
+      throw err
+    }
+    ciphertext = fallbackEvent.content
   }
 
   const deterministicPrivkey = generatePrivateKey({ seedBytes: prfBytes })
@@ -235,13 +277,11 @@ async function getPrivkeyFromSecureElement () {
 
   let privkey
   try {
-    privkey = signer.nip44Decrypt(signer.getPublicKey(), textDecoder.decode(blobBytes))
+    privkey = signer.nip44Decrypt(signer.getPublicKey(), ciphertext)
   } finally {
     signer.cleanup?.()
   }
 
-  const storedUserHandle = bufferSourceToUint8Array(credential.response.userHandle)
-  const storedPubkeyHex = toHex(storedUserHandle)
   const derivedPubkeyHex = toHex(getPublicKey(privkey))
   if (storedPubkeyHex && derivedPubkeyHex && storedPubkeyHex !== derivedPubkeyHex) {
     throw new Error(t({ key: 'accountLoadError' }))
@@ -251,7 +291,7 @@ async function getPrivkeyFromSecureElement () {
   if (credential.authenticatorAttachment !== 'platform') {
     const profile = await getProfile(derivedPubkeyHex)
     const clonedDisplayName = profile?.name || ''
-    await storeAccountPrivkeyInSecureElement({ privkey, displayName: clonedDisplayName })
+    await storeAccountPrivkeyInSecureElement({ privkey, displayName: clonedDisplayName, writeRelays: account?.relays?.write })
   }
 
   return { passkeyRawId, privkey, prf: prfBytes }
@@ -286,19 +326,33 @@ async function reauthenticateWithPasskey (pubkey, rawId) {
 
   const extensions = extractExtensions(credential)
   let prfBytes = extractPrfBytes(extensions)
+  let accountRecord = null
   if (!prfBytes?.length) {
-    const account = await idb.getAccountByPubkey(pubkey)
-    const storedPrf = bufferSourceToUint8Array(account?.prf)
+    accountRecord = await idb.getAccountByPubkey(pubkey)
+    const storedPrf = bufferSourceToUint8Array(accountRecord?.prf)
     if (storedPrf?.length) prfBytes = storedPrf
   }
-  const blobBytes = extractLargeBlobBytes(extensions)
   if (!prfBytes?.length) {
     const err = new Error(t({ key: 'passkeyPrfMissing' }))
     err.code = PASSKEY_PRF_MISSING_CODE
     throw err
   }
-  if (!blobBytes) {
-    return { success: false, privkey: null, rawPrivkey: null }
+  const passkeyId = base64UrlEncode(descriptor.id)
+  const blobBytes = extractLargeBlobBytes(extensions)
+  let ciphertext
+  if (blobBytes) {
+    ciphertext = textDecoder.decode(blobBytes)
+  } else {
+    if (!accountRecord) accountRecord = await idb.getAccountByPubkey(pubkey)
+    const fallbackEvent = await getPasskeyFallbackEvent({
+      pubkey: toHex(pubkey),
+      passkeyId,
+      relays: accountRecord?.relays?.write
+    })
+    if (!fallbackEvent?.content) {
+      return { success: false, privkey: null, rawPrivkey: null }
+    }
+    ciphertext = fallbackEvent.content
   }
 
   const deterministicPrivkey = generatePrivateKey({ seedBytes: prfBytes })
@@ -306,7 +360,7 @@ async function reauthenticateWithPasskey (pubkey, rawId) {
 
   let privkey
   try {
-    privkey = signer.nip44Decrypt(signer.getPublicKey(), textDecoder.decode(blobBytes))
+    privkey = signer.nip44Decrypt(signer.getPublicKey(), ciphertext)
   } catch (_err) {
     return { success: false, privkey: null, rawPrivkey: null }
   } finally {
@@ -367,7 +421,7 @@ async function ensurePasskeyEncryptedBackup ({ passkeyRawId, privkey }) {
     signer.cleanup?.()
   }
 
-  await writePasskeyLargeBlob(descriptor.id, ciphertext)
+  await writePasskeyLargeBlob(descriptor.id, ciphertext, { privkey })
   return true
 }
 

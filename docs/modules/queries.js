@@ -128,3 +128,22 @@ export function eventToRelays (event) {
 
   return result
 }
+
+export async function getPasskeyFallbackEvent ({ pubkey, passkeyId, relays, _nostrRelays = nostrRelays } = {}) {
+  if (!pubkey || !passkeyId) return null
+
+  const targetRelays = Array.isArray(relays) && relays.length ? relays : freeRelays
+  try {
+    const { result } = await _nostrRelays.getEvents({
+      kinds: [34952],
+      authors: [pubkey],
+      '#d': [passkeyId],
+      limit: 1
+    }, targetRelays)
+    if (!result?.length) return null
+    return result.sort((a, b) => b.created_at - a.created_at)[0]
+  } catch (err) {
+    console.error('Error fetching passkey fallback event:', err)
+    return null
+  }
+}

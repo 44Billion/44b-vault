@@ -2,6 +2,7 @@ import idb from 'idb'
 import { getPublicKey, finalizeEvent, nip44, nip04 } from 'nostr'
 import { hexToBytes } from 'helpers/misc.js'
 import { serializeError } from 'helpers/error.js'
+import { getRelays } from 'queries'
 
 // Capture stable references to avoid post-load monkey-patching
 const nip44GetConversationKey = nip44.getConversationKey.bind(nip44)
@@ -165,8 +166,9 @@ export default class NostrSigner {
     return finalizeEvent(event, this.#privkey)
   }
 
+  // { read: [], write: [] } instead of { [relayUrl]: { read: true, write: true } }
   getRelays () {
-    return { read: [], write: [] }
+    return getRelays(this.#pubkey)
   }
 
   nip04Encrypt (peerPubkey, plaintext) {
