@@ -11,7 +11,7 @@ import NostrSigner from 'nostr-signer'
 //   extension, using a deterministic key derived from the PRF extension so we
 //   never persist the private key in clear text inside the passkey metadata.
 // - The passkey user handle (`user.id`) stores the public key so that a synced
-//   passkey can still be identified across devices without leaking the private key.
+//   passkey can be identified across devices.
 // - Some authenticators/browsers may require multiple prompts: one for the
 //   passkey registrarion and another for writing the large blob payload.
 // - There is currently no way to ask for a credential deletion (user does it manually).
@@ -104,16 +104,23 @@ async function writePasskeyLargeBlob (rawId, ciphertext, { privkey, writeRelays,
       eval: { first: PASSKEY_PRF_SALT_BYTES }
     }
   }
-  const credential = await navigator.credentials.get({
-    publicKey: {
-      challenge,
-      rpId: window.location.hostname,
-      allowCredentials: [descriptor],
-      // try to not ask for OS password nor biometric/PIN support this second time
-      userVerification: 'discouraged'
-    },
-    extensions: extensionRequest
-  })
+  let credential
+  try {
+    await navigator.credentials.get({
+      publicKey: {
+        challenge,
+        rpId: window.location.hostname,
+        allowCredentials: [descriptor],
+        // try to not ask for OS password nor biometric/PIN support this second time
+        userVerification: 'discouraged'
+      },
+      extensions: extensionRequest
+    })
+  } catch (err) {
+    if (err.name !== 'NotAllowedError') throw err
+    // Some users may cancel the operation because of double prompt
+    // We ignore it and fallback to nostr event storage
+  }
   const extensions = credential?.getClientExtensionResults?.() ?? {}
   const prfEvalBytes = includePrfEval ? extractPrfBytes(extensions) : null
   if (!extensions.largeBlob?.written) {
