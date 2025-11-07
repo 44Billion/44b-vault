@@ -11,7 +11,7 @@ async function initDb (...args) {
     return db
   }))
 }
-function _initDb (dbName = '44b-vault', dbVersion = 1) {
+function _initDb (dbName = '44b-vault', dbVersion = 2) {
   const req = indexedDB.open(dbName, dbVersion)
   // eslint-disable-next-line prefer-const, promise/param-names
   let resolve, reject, promise = new Promise((rs, rj) => { resolve = rs; reject = rj })
@@ -72,6 +72,18 @@ function _initDb (dbName = '44b-vault', dbVersion = 1) {
       }
       */
       db.createObjectStore('apps', { keyPath: 'id' })
+    }
+    if (e.oldVersion < 2) {
+      const storeName = 'queueEntries'
+      const existingStores = Array.from(db.objectStoreNames)
+      const hasQueueStore = existingStores.includes(storeName)
+      const queueStore = hasQueueStore
+        ? req.transaction.objectStore(storeName)
+        : db.createObjectStore(storeName, { keyPath: 'id', autoIncrement: true })
+
+      if (!queueStore.indexNames.contains('type')) {
+        queueStore.createIndex('type', 'type', { unique: false })
+      }
     }
   }
   req.onerror = function () { reject(req.error) }
@@ -174,6 +186,113 @@ async function createOrUpdateAccount (account) {
   return run('put', [{ ...account, ts: Date.now() }], 'accounts')
 }
 
+async function enqueueQueueEntry (record) {
+  if (!record || typeof record.type !== 'string') throw new Error('type is required')
+  const payload = {
+    ...record,
+    enqueuedAt: record.enqueuedAt ?? Date.now(),
+    retryCount: record.retryCount ?? 0,
+    lastAttemptAt: record.lastAttemptAt ?? null,
+    lastError: record.lastError ?? null
+  }
+  return run('add', [payload], 'queueEntries').then(() => undefined)
+}
+
+async function deleteQueueEntryById (id) {
+  if (id == null) throw new Error('id is required')
+  return run('delete', [id], 'queueEntries').then(() => undefined)
+}
+
+async function * iterateQueueEntries ({ type } = {}) {
+  let lastPrimaryKey = null
+
+  while (true) {
+    let record
+    try {
+      record = await readNextQueueEntry({ type, lastPrimaryKey })
+    } catch (err) {
+      if (err?.name === 'TransactionInactiveError') {
+        continue
+      }
+      throw err
+    }
+
+    const { entry, primaryKey } = record || {}
+    if (!entry) break
+
+    lastPrimaryKey = primaryKey ?? entry.id ?? lastPrimaryKey
+    yield entry
+  }
+}
+
+async function readNextQueueEntry ({ type, lastPrimaryKey }) {
+  const db = await _initDb()
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(['queueEntries'], 'readonly')
+    const store = tx.objectStore('queueEntries')
+    const source = type ? store.index('type') : store
+
+    let request
+    if (type) {
+      request = source.openCursor(IDBKeyRange.only(type))
+    } else {
+      const range = lastPrimaryKey != null ? IDBKeyRange.lowerBound(lastPrimaryKey, true) : undefined
+      request = range ? source.openCursor(range) : source.openCursor()
+    }
+
+    request.onsuccess = () => handleCursor(request.result)
+    request.onerror = () => reject(request.error)
+
+    function handleCursor (cursor) {
+      if (!cursor) {
+        resolve({ entry: null })
+        return
+      }
+
+      if (type && lastPrimaryKey != null && cursor.primaryKey <= lastPrimaryKey) {
+        try {
+          if (typeof cursor.continuePrimaryKey === 'function') {
+            cursor.continuePrimaryKey(type, lastPrimaryKey)
+          } else {
+            cursor.continue()
+          }
+        } catch (err) {
+          reject(err)
+        }
+        return
+      }
+
+      const value = { ...cursor.value }
+      if (value.id == null) value.id = cursor.primaryKey
+      resolve({ entry: value, primaryKey: cursor.primaryKey })
+    }
+  })
+}
+
+async function updateQueueEntryById (id, updates) {
+  if (id == null) throw new Error('id is required')
+
+  const { result: existing } = await run('get', [id], 'queueEntries')
+  if (!existing) return false
+
+  const nextValue = typeof updates === 'function' ? updates(existing) : { ...existing, ...updates }
+  if (!nextValue) return false
+
+  const payload = {
+    ...nextValue,
+    id: existing.id ?? id
+  }
+
+  await run('put', [payload], 'queueEntries')
+  return true
+}
+
+async function getQueueEntries ({ type } = {}) {
+  const entries = []
+  for await (const entry of iterateQueueEntries({ type })) entries.push(entry)
+  return entries
+}
+
 async function getAccountByPubkey (pubkey) {
   return run('get', [pubkey], 'accounts').then(v => v.result)
 }
@@ -231,7 +350,12 @@ Object.assign(idb, {
   deleteAccountByPubkey,
   hasLoggedInUsers,
   hasPermission,
-  appendLog
+  appendLog,
+  enqueueQueueEntry,
+  deleteQueueEntryById,
+  iterateQueueEntries,
+  getQueueEntries,
+  updateQueueEntryById
 })
 
 export default idb

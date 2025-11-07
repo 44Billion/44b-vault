@@ -1,11 +1,12 @@
 import { initDb } from 'idb'
-import { initSw } from 'sw-manager'
+// import { initSw } from 'sw-manager'
 import { polyfill, initConfig, config } from 'config'
 import { initTranslation } from 'translator'
 import { initMessenger, changeDimensions } from 'messenger'
 import { initHandlers } from 'handlers'
-import { getQueryParam } from 'helpers/misc.js'
+// import { getQueryParam } from 'helpers/misc.js'
 import { maybeShowAuthenticatorOverlay } from 'handlers/authenticator-overlay.js'
+import { initWorkerService } from 'worker-service'
 
 polyfill()
 // await initSw({ swUpdateReadyHandler })
@@ -41,6 +42,7 @@ async function load (isntInIframe) {
   await initHandlers()
   await initMessenger()
   await showBody(isntInIframe)
+  initWorkerService()
 }
 
 async function showBody (isntInIframe) {
@@ -69,22 +71,22 @@ async function showBody (isntInIframe) {
   document.getElementById('view').style.height = `${nextViewHeight}px`
 }
 
-function swUpdateReadyHandler (registration) {
-  const swUpdateBtn = document.getElementById('update-vault-btn')
-  swUpdateBtn.addEventListener('click', () => {
-    if (!registration.waiting) return
+// function swUpdateReadyHandler (registration) {
+//   const swUpdateBtn = document.getElementById('update-vault-btn')
+//   swUpdateBtn.addEventListener('click', () => {
+//     if (!registration.waiting) return
 
-    registration.waiting.postMessage({ code: 'SKIP_WAITING' })
-  }, { once: true })
-  swUpdateBtn.classList.remove('invisible')
-  const page = getQueryParam('page') || 0
-  if (page !== 0) return
+//     registration.waiting.postMessage({ code: 'SKIP_WAITING' })
+//   }, { once: true })
+//   swUpdateBtn.classList.remove('invisible')
+//   const page = getQueryParam('page') || 0
+//   if (page !== 0) return
 
-  const oldHeight = document.getElementById('vault').getBoundingClientRect().height
-  const visiblePageContent = document.querySelector('#page-0 > div:not(.invisible)')
-  const nextViewHeight = visiblePageContent ? visiblePageContent.getBoundingClientRect().height : 0
-  const diffViewHeight = nextViewHeight - document.getElementById('view').style.height.split('px')[0]
-  changeDimensions({ height: oldHeight + diffViewHeight })
+//   const oldHeight = document.getElementById('vault').getBoundingClientRect().height
+//   const visiblePageContent = document.querySelector('#page-0 > div:not(.invisible)')
+//   const nextViewHeight = visiblePageContent ? visiblePageContent.getBoundingClientRect().height : 0
+//   const diffViewHeight = nextViewHeight - document.getElementById('view').style.height.split('px')[0]
+//   changeDimensions({ height: oldHeight + diffViewHeight })
 
-  document.getElementById('view').style.height = `${nextViewHeight}px`
-}
+//   document.getElementById('view').style.height = `${nextViewHeight}px`
+// }

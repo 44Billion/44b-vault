@@ -9,6 +9,7 @@ import idb from 'idb'
 import { showSuccessOverlay, showErrorOverlay } from 'helpers/misc.js'
 import { setAccountsState } from 'messenger'
 import { t } from 'translator'
+import { triggerJob, nostrEventPublisherJobName } from 'worker-service'
 
 let currentPrivkey = null
 let currentPicture = null
@@ -77,46 +78,7 @@ async function createAccount (privkey) {
     if (!displayName) {
       throw new Error(t({ key: 'displayNameRequired' }))
     }
-    let profileEvent, relaysEvent, now
-    try {
-      signer = NostrSigner.getOrCreate(privkey)
-      now = Math.floor(Date.now() / 1000)
-      profileEvent = signer.signEvent({
-        kind: 0,
-        created_at: now,
-        tags: [
-          ['name', displayName],
-          ...(currentPicture ? [['picture', currentPicture]] : [])
-        ],
-        content: JSON.stringify({ name: displayName, ...(currentPicture && { picture: currentPicture }) })
-      })
-    } catch (err) {
-      console.error(err)
-      throw new Error('PROFILE_SIGN_ERROR')
-    }
-    let userRelays
-    try {
-      userRelays = freeRelays.slice(0, 2)
-      relaysEvent = signer.signEvent({
-        kind: 10002,
-        created_at: now,
-        tags: userRelays.map(r => ['r', r]),
-        content: JSON.stringify({ name: displayName })
-      })
-    } catch (err) {
-      console.error(err)
-      throw new Error('RELAYS_SIGN_ERROR')
-    }
-    let { success, errors } = await nostrRelays.sendEvent(relaysEvent, seedRelays)
-    if (!success) {
-      console.error(errors.map(({ relay, reason }) => `${relay}: ${reason}`).join('\n'))
-      throw new Error('RELAY_EVENT_SEND_ERROR')
-    }
-    ;({ success, errors } = await nostrRelays.sendEvent(profileEvent, userRelays))
-    if (!success) {
-      console.error(errors.map(({ relay, reason }) => `${relay}: ${reason}`).join('\n'))
-      throw new Error('PROFILE_EVENT_SEND_ERROR')
-    }
+    const userRelays = freeRelays.slice(0, 2)
     let passkeyRawId
     let prf
     try {
@@ -134,22 +96,112 @@ async function createAccount (privkey) {
       console.error(err)
       throw new Error(errorMessage)
     }
-    try {
-      await idb.createOrUpdateAccount({
-        pubkey: signer.getPublicKey(),
-        passkeyRawId,
-        ...(prf?.length ? { prf } : {}),
-        profile: await eventToProfile(profileEvent, { _getSvgAvatar: getSvgAvatar }),
-        relays: eventToRelays(relaysEvent)
-      })
-      setAccountsState() // async, don't await
-    } catch (err) {
-      console.error(err)
-      throw new Error('IDB_ACCOUNT_CREATE_ERROR')
-    }
+    let profileEvent
+    let relaysEvent
+    ({ signer, profileEvent, relaysEvent } = await createBootstrapArtifacts({ privkey, displayName, picture: currentPicture, userRelays }))
+    await persistNewAccountRecord({ signer, passkeyRawId, prf, profileEvent, relaysEvent })
+
+    await publishBootstrapEvents({ profileEvent, relaysEvent, userRelays })
   } catch (err) {
     if (signer) NostrSigner.revoke(signer)
     throw err
+  }
+}
+
+async function createBootstrapArtifacts ({ privkey, displayName, picture, userRelays }) {
+  const signer = NostrSigner.getOrCreate(privkey)
+  const now = Math.floor(Date.now() / 1000)
+
+  let profileEvent
+  try {
+    profileEvent = signer.signEvent({
+      kind: 0,
+      created_at: now,
+      tags: [
+        ['name', displayName],
+        ...(picture ? [['picture', picture]] : [])
+      ],
+      content: JSON.stringify({ name: displayName, ...(picture && { picture }) })
+    })
+  } catch (err) {
+    console.error(err)
+    NostrSigner.revoke(signer)
+    throw new Error('PROFILE_SIGN_ERROR')
+  }
+
+  let relaysEvent
+  try {
+    relaysEvent = signer.signEvent({
+      kind: 10002,
+      created_at: now,
+      tags: userRelays.map(r => ['r', r]),
+      content: JSON.stringify({ name: displayName })
+    })
+  } catch (err) {
+    console.error(err)
+    NostrSigner.revoke(signer)
+    throw new Error('RELAYS_SIGN_ERROR')
+  }
+
+  return { signer, profileEvent, relaysEvent }
+}
+
+async function persistNewAccountRecord ({ signer, passkeyRawId, prf, profileEvent, relaysEvent }) {
+  try {
+    await idb.createOrUpdateAccount({
+      pubkey: signer.getPublicKey(),
+      passkeyRawId,
+      ...(prf?.length ? { prf } : {}),
+      profile: await eventToProfile(profileEvent, { _getSvgAvatar: getSvgAvatar }),
+      relays: eventToRelays(relaysEvent)
+    })
+    setAccountsState() // async, don't await
+  } catch (err) {
+    console.error(err)
+    throw new Error('IDB_ACCOUNT_CREATE_ERROR')
+  }
+}
+
+async function publishBootstrapEvents ({ profileEvent, relaysEvent, userRelays }) {
+  const tasks = [
+    { event: relaysEvent, relays: seedRelays },
+    { event: profileEvent, relays: userRelays }
+  ]
+
+  let enqueued = false
+
+  for (const { event, relays } of tasks) {
+    if (!event || !Array.isArray(relays) || relays.length === 0) continue
+
+    try {
+      const { success, errors } = await nostrRelays.sendEvent(event, relays)
+      if (success) continue
+
+      if (errors?.length) {
+        console.error(errors.map(({ relay, reason }) => `${relay}: ${reason}`).join('\n'))
+      }
+      enqueued = (await persistForRetry(event, relays)) || enqueued
+    } catch (err) {
+      console.error(err)
+      enqueued = (await persistForRetry(event, relays)) || enqueued
+    }
+  }
+
+  if (enqueued) triggerJob(nostrEventPublisherJobName, { delay: 0 })
+
+  async function persistForRetry (eventToQueue, relaysToQueue) {
+    try {
+      await idb.enqueueQueueEntry({
+        type: 'nostr:event',
+        event: eventToQueue,
+        relays: relaysToQueue,
+        context: 'account-bootstrap'
+      })
+      return true
+    } catch (queueErr) {
+      console.error(queueErr)
+      return false
+    }
   }
 }
 
