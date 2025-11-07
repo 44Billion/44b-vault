@@ -90,10 +90,20 @@ function base64UrlEncode (value) {
   return btoa(binary).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '')
 }
 
-async function writePasskeyLargeBlob (rawId, ciphertext, { privkey, writeRelays } = {}) {
+async function writePasskeyLargeBlob (rawId, ciphertext, { privkey, writeRelays, includePrfEval = false } = {}) {
   const descriptor = createAllowCredentialDescriptor(rawId)
   if (!descriptor) throw new Error('invalid-passkey')
   const challenge = crypto.getRandomValues(new Uint8Array(32))
+  const extensionRequest = {
+    largeBlob: {
+      write: textEncoder.encode(ciphertext)
+    }
+  }
+  if (includePrfEval) {
+    extensionRequest.prf = {
+      eval: { first: PASSKEY_PRF_SALT_BYTES }
+    }
+  }
   const credential = await navigator.credentials.get({
     publicKey: {
       challenge,
@@ -102,13 +112,10 @@ async function writePasskeyLargeBlob (rawId, ciphertext, { privkey, writeRelays 
       // try to not ask for OS password nor biometric/PIN support this second time
       userVerification: 'discouraged'
     },
-    extensions: {
-      largeBlob: {
-        write: textEncoder.encode(ciphertext)
-      }
-    }
+    extensions: extensionRequest
   })
   const extensions = credential?.getClientExtensionResults?.() ?? {}
+  const prfEvalBytes = includePrfEval ? extractPrfBytes(extensions) : null
   if (!extensions.largeBlob?.written) {
     if (!privkey) throw new Error('passkey-largeblob-write-failed')
     const signer = NostrSigner.getOrCreate(privkey)
@@ -137,6 +144,7 @@ async function writePasskeyLargeBlob (rawId, ciphertext, { privkey, writeRelays 
       throw new Error('passkey-largeblob-write-failed')
     }
   }
+  return prfEvalBytes
 }
 
 async function storeAccountPrivkeyInSecureElement ({ privkey, displayName, writeRelays } = {}) {
@@ -203,13 +211,18 @@ async function storeAccountPrivkeyInSecureElement ({ privkey, displayName, write
 
   const passkeyRawId = new Uint8Array(credential.rawId)
 
+  let prfEvalBytes
   try {
-    await writePasskeyLargeBlob(passkeyRawId, ciphertext, { privkey, writeRelays })
+    prfEvalBytes = await writePasskeyLargeBlob(passkeyRawId, ciphertext, { privkey, writeRelays, includePrfEval: true })
   } catch (_err) {
     throw new Error(t({ key: 'passkeyStoreFailed' }))
   }
 
-  return { passkeyRawId, prf: prfBytes }
+  const shouldPersistPrf = !prfEvalBytes?.length
+  return {
+    passkeyRawId,
+    ...(shouldPersistPrf ? { prf: new Uint8Array(prfBytes) } : {})
+  }
 }
 
 // User will pick which session because of residentKey=required when creating passkey
@@ -239,7 +252,8 @@ async function getPrivkeyFromSecureElement () {
   const storedUserHandle = bufferSourceToUint8Array(credential.response.userHandle)
   const storedPubkeyHex = toHex(storedUserHandle)
   const extensions = extractExtensions(credential)
-  let prfBytes = extractPrfBytes(extensions)
+  const prfBytesFromAssertion = extractPrfBytes(extensions)
+  let prfBytes = prfBytesFromAssertion
   let account = null
   if (!prfBytes?.length) {
     account = await idb.getAccountByPasskeyRawId(passkeyRawId)
@@ -294,7 +308,12 @@ async function getPrivkeyFromSecureElement () {
     await storeAccountPrivkeyInSecureElement({ privkey, displayName: clonedDisplayName, writeRelays: account?.relays?.write })
   }
 
-  return { passkeyRawId, privkey, prf: prfBytes }
+  const shouldReturnPrf = !prfBytesFromAssertion?.length
+  return {
+    passkeyRawId,
+    privkey,
+    ...(shouldReturnPrf ? { prf: new Uint8Array(prfBytes) } : {})
+  }
 }
 
 // Do this to confirm a sensitive operation
