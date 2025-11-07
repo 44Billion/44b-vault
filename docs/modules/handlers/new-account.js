@@ -82,7 +82,12 @@ async function createAccount (privkey) {
     let passkeyRawId
     let prf
     try {
-      ({ passkeyRawId, prf } = await storeAccountPrivkeyInSecureElement({ privkey, displayName, writeRelays: userRelays }))
+      ({ passkeyRawId, prf } = await storeAccountPrivkeyInSecureElement({
+        privkey,
+        displayName,
+        writeRelays: userRelays,
+        iconURL: currentPicture
+      }))
     } catch (err) {
       let errorMessage
       // This detects an error that can sometimes happen when calling

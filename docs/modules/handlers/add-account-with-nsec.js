@@ -5,8 +5,8 @@ import idb from 'idb'
 import { getProfile, getRelays } from 'queries'
 import { freeRelays } from 'nostr-relays'
 import { getSvgAvatar } from 'avatar'
-import { storeAccountPrivkeyInSecureElement, ensurePasskeyEncryptedBackup } from 'passkey-manager'
-import { showSuccessOverlay, showErrorOverlay, getRandomId } from 'helpers/misc.js'
+import { storeAccountPrivkeyInSecureElement, ensurePasskeyEncryptedBackup, signalPasskeyCurrentUserDetails } from 'passkey-manager'
+import { showSuccessOverlay, showErrorOverlay, getRandomId, bytesToHex } from 'helpers/misc.js'
 import { setAccountsState } from 'messenger'
 import { t } from 'translator'
 
@@ -69,7 +69,7 @@ async function onButtonClick () {
   disableButton()
 
   try {
-    const nsecValue = nsecInput.value.trim()
+    const nsecValue = nsecInput.value.trim().toLowerCase()
 
     if (!nsecValue) {
       throw new Error(t({ key: 'nsecRequired' }))
@@ -78,15 +78,13 @@ async function onButtonClick () {
     let privkey
     try {
       if (nsecValue.startsWith('nsec1')) {
-        // Decode nsec using nip19Decode
         const decoded = nip19Decode(nsecValue)
         if (decoded.type !== 'nsec') {
           throw new Error('Invalid nsec format')
         }
-        privkey = decoded.data
-      } else if (nsecValue.length === 64 && /^[0-9a-fA-F]+$/.test(nsecValue)) {
-        // Hex private key
-        privkey = nsecValue.toLowerCase()
+        privkey = bytesToHex(decoded.data)
+      } else if (/^[0-9a-f]{64}$/.test(nsecValue)) {
+        privkey = nsecValue
       } else {
         throw new Error('Invalid private key format. Use nsec1... or 64-character hex.')
       }
@@ -101,42 +99,44 @@ async function onButtonClick () {
     if (!accountExists) {
       let passkeyRawId
       let prf
-      let profile, relays
+      let profile
+      let relays
+      const fallbackName = `User#${getRandomId().slice(0, 5)}`
 
       try {
-        // Fetch profile and relays first
-        profile = await getProfile(pubkey, { _getSvgAvatar: getSvgAvatar })
-        relays = await getRelays(pubkey)
-      } catch (err) {
-        console.error('Failed to fetch profile/relays from network:', err)
-        // Use fallback profile/relays
-        profile = {
-          name: `User#${getRandomId().slice(0, 5)}`,
-          about: '',
-          picture: await getSvgAvatar(pubkey),
-          npub: npubEncode(pubkey),
-          meta: { events: [] }
-        }
-        relays = {
-          read: freeRelays.slice(0, 2),
-          write: freeRelays.slice(0, 2),
-          meta: { events: [] }
-        }
-      }
-
-      try {
-        // Store the private key as a passkey using the profile name
         ({ passkeyRawId, prf } = await storeAccountPrivkeyInSecureElement({
           privkey,
-          displayName: profile.name,
-          writeRelays: relays?.write
+          displayName: fallbackName
         }))
       } catch (err) {
         console.error('Failed to store private key as passkey:', err)
         throw new Error(t({ key: 'passkeyStoreFailed' }))
       }
 
-      // Create account object
+      try {
+        relays = await getRelays(pubkey)
+      } catch (err) {
+        console.error('Failed to fetch relays from network:', err)
+        const defaultRelays = freeRelays.slice(0, 2)
+        relays = {
+          read: defaultRelays,
+          write: defaultRelays,
+          meta: { events: [] }
+        }
+      }
+      try {
+        profile = await getProfile(pubkey, { _getSvgAvatar: getSvgAvatar })
+      } catch (err) {
+        console.error('Failed to fetch profile from network:', err)
+        profile = {
+          name: fallbackName,
+          about: '',
+          picture: await getSvgAvatar(pubkey),
+          npub: npubEncode(pubkey),
+          meta: { events: [] }
+        }
+      }
+
       const account = {
         pubkey,
         passkeyRawId,
@@ -154,8 +154,16 @@ async function onButtonClick () {
           meta: relays.meta
         }
       }
-
       await idb.createOrUpdateAccount(account)
+
+      // if it isn't a fallback profile, signal details
+      if (profile.meta.events.length) {
+        await signalPasskeyCurrentUserDetails({
+          pubkey,
+          displayName: profile.name,
+          iconURL: profile.picture
+        })
+      }
     } else if (accountExists?.passkeyRawId) {
       try {
         await ensurePasskeyEncryptedBackup({ passkeyRawId: accountExists.passkeyRawId, privkey })

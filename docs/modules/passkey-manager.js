@@ -154,7 +154,7 @@ async function writePasskeyLargeBlob (rawId, ciphertext, { privkey, writeRelays,
   return prfEvalBytes
 }
 
-async function storeAccountPrivkeyInSecureElement ({ privkey, displayName, writeRelays } = {}) {
+async function storeAccountPrivkeyInSecureElement ({ privkey, displayName, writeRelays, iconURL } = {}) {
   displayName = displayName?.trim?.() ?? ''
 
   const derivedPubkey = getPublicKey(privkey)
@@ -173,7 +173,8 @@ async function storeAccountPrivkeyInSecureElement ({ privkey, displayName, write
     user: {
       id: hexToBytes(pubkeyHex),
       name,
-      displayName
+      displayName,
+      ...(iconURL && { iconURL })
     },
     pubKeyCredParams: [
       { alg: -8, type: 'public-key' },
@@ -451,11 +452,43 @@ async function ensurePasskeyEncryptedBackup ({ passkeyRawId, privkey }) {
   return true
 }
 
+async function signalPasskeyCurrentUserDetails ({ pubkey, displayName, iconURL }) {
+  if (typeof window === 'undefined') return false
+  const signalFn = window?.PublicKeyCredential?.signalCurrentUserDetails
+  if (typeof signalFn !== 'function') return false
+
+  const pubkeyHex = toHex(pubkey)
+  if (!pubkeyHex) return false
+
+  displayName = displayName?.trim?.() ?? ''
+  const npub = npubEncode(pubkeyHex)
+  // Some implementations only show user.name
+  // and npub alone isn't very friendly
+  const name = displayName ? `${displayName} (${npub})` : npub
+
+  const details = {
+    rpId: window.location.hostname,
+    userId: base64UrlEncode(hexToBytes(pubkeyHex)),
+    name,
+    displayName,
+    ...(iconURL && { iconURL })
+  }
+
+  try {
+    await signalFn(details)
+    return true
+  } catch (err) {
+    console.error('Failed to signal current user details:', err)
+    return false
+  }
+}
+
 export {
   storeAccountPrivkeyInSecureElement,
   getPrivkeyFromSecureElement,
   reauthenticateWithPasskey,
   ensurePasskeyEncryptedBackup,
+  signalPasskeyCurrentUserDetails,
   PASSKEY_LARGE_BLOB_MISSING_CODE,
   PASSKEY_PRF_MISSING_CODE
 }
