@@ -1,6 +1,6 @@
 import { getSvgAvatar } from 'avatar'
 import { router } from 'router'
-import { reauthenticateWithPasskey, PASSKEY_PRF_MISSING_CODE } from 'passkey-manager'
+import { reauthenticateWithPasskey, PASSKEY_PRF_MISSING_CODE, isCredentialNotFoundError } from 'passkey-manager'
 import NostrSigner from 'nostr-signer'
 import idb from 'idb'
 import { showSuccessOverlay, showErrorOverlay, getQueryParam } from 'helpers/misc.js'
@@ -45,14 +45,18 @@ function init () {
       if (err?.code === PASSKEY_PRF_MISSING_CODE) {
         showErrorOverlay(t({ key: 'unlockAccountError' }), t({ key: 'passkeyPrfMissing' }))
       } else if (err.name === 'NotAllowedError') {
-        showErrorOverlay(t({ key: 'unlockAccountError' }), t({ key: 'multiDeviceLoginUnsupported' }))
-        if (currentAccount?.pubkey) {
-          try {
-            await idb.deleteAccountByPubkey(currentAccount.pubkey)
-            await setAccountsState()
-          } catch (cleanupErr) {
-            console.error('Failed to remove unsupported multi-device account:', cleanupErr)
+        if (isCredentialNotFoundError(err)) {
+          showErrorOverlay(t({ key: 'unlockAccountError' }), t({ key: 'multiDeviceLoginUnsupported' }))
+          if (currentAccount?.pubkey) {
+            try {
+              await idb.deleteAccountByPubkey(currentAccount.pubkey)
+              await setAccountsState()
+            } catch (cleanupErr) {
+              console.error('Failed to remove unsupported multi-device account:', cleanupErr)
+            }
           }
+        } else {
+          showErrorOverlay(t({ key: 'unlockAccountError' }), t({ key: 'authenticationFailed' }))
         }
       } else {
         showErrorOverlay(t({ key: 'unlockAccountError' }))

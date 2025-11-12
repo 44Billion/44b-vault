@@ -42,6 +42,44 @@ const DEFAULT_TRANSPORTS = [
 const PASSKEY_LARGE_BLOB_MISSING_CODE = 'passkey-largeblob-missing'
 const PASSKEY_PRF_MISSING_CODE = 'passkey-prf-missing'
 
+// Heuristic patterns to detect "passkey not found" conditions from user-agent error messages.
+// These are best-effort and may vary by platform and browser locale (en, pt-BR, pt-PT). Keep conservative.
+// References:
+// - Chromium WebAuthn string: "No passkeys available" (IDS_WEBAUTHN_ERROR_NO_PASSKEYS_TITLE)
+//   https://chromium.googlesource.com/chromium/src/+/main/chrome/app/generated_resources.grd#17665
+// - Chromium WebAuthn description: "There aren't any passkeys for <site> on this device"
+//   https://chromium.googlesource.com/chromium/src/+/main/chrome/app/generated_resources.grd#17668
+const PASSKEY_NOT_FOUND_ERROR_PATTERNS = [
+  // Direct Chromium title string and close variants
+  /no\s+(?:passkeys?|credentials?)\s+available/i,
+  // Descriptive phrasing used in Chromium UI
+  /there\s+(?:isn'?t|are(?:n'?t)?)\s+any\s+passkeys?/i,
+  // Generic credential not found phrasings
+  /credential\s+(?:isn't|is\s+not|could\s+not\s+be)\s+found/i,
+  /unknown\s+credential/i,
+  /credential\s+.*\s+missing/i,
+  // Site-specific or account wording
+  /doesn'?t\s+have\s+a\s+passkey/i,
+  /not\s+registered/i,
+
+  // Portuguese (pt-BR / pt-PT) variants
+  // "Nenhuma/sem/nao ha passkey/credencial/chave de acesso disponivel"
+  /nenhuma\s+(?:passkeys?|chaves?(?:\s+de)?\s+acesso|credenciais?)\s+disponíve(?:l|is)/i,
+  /sem\s+(?:passkeys?|chaves?(?:\s+de)?\s+acesso|credenciais?)\s+disponíve(?:l|is)/i,
+  /não\s+(?:há|existem)\s+(?:passkeys?|chaves?(?:\s+de)?\s+acesso|credenciais?)(?:\s+(?:para\b.*|disponíve(?:l|is)|neste\s+dispositivo))?/i,
+  // "credencial/passkey/chave ... não (foi) encontrada / inexistente / não foi possível encontrar"
+  /(credenciais?|passkeys?|chaves?(?:\s+de)?\s+acesso)\s+(?:não\s*(?:foi)?\s*encontrad[ao]s?|inexistentes?)/i,
+  /não\s+foi\s+possível\s+encontrar\s+(?:a\s+)?(credencial|passkey|chave(?:\s+de)?\s+acesso)/i,
+  // "credencial desconhecida"
+  /(credenciais?|passkeys?|chaves?(?:\s+de)?\s+acesso)\s+desconhecid[ao]s?/i,
+  // "credencial ... ausente / em falta / faltando"
+  /(credenciais?|passkeys?|chaves?(?:\s+de)?\s+acesso).*\s+(ausente|em\s+falta|faltando)/i,
+  // "não tem/possui passkey/chave de acesso"
+  /não\s+(?:tem|possui)\s+(?:uma\s+)?(?:passkey|chave(?:\s+de)?\s+acesso)/i,
+  // "(passkey|credencial) não está (registrada|registada|cadastrada)"
+  /(passkeys?|chaves?(?:\s+de)?\s+acesso|credenciais?).*não\s+(?:est[áa]\s+)?(?:registrad[ao]s?|registad[ao]s?|cadastrad[ao]s?)/i
+]
+
 function toHex (value) {
   if (!value) return ''
   return typeof value === 'string' ? value : bytesToHex(value)
@@ -483,12 +521,19 @@ async function signalPasskeyCurrentUserDetails ({ pubkey, displayName, iconURL }
   }
 }
 
+function isCredentialNotFoundError (error) {
+  const message = error?.message
+  if (!message) return false
+  return PASSKEY_NOT_FOUND_ERROR_PATTERNS.some(pattern => pattern.test(message))
+}
+
 export {
   storeAccountPrivkeyInSecureElement,
   getPrivkeyFromSecureElement,
   reauthenticateWithPasskey,
   ensurePasskeyEncryptedBackup,
   signalPasskeyCurrentUserDetails,
+  isCredentialNotFoundError,
   PASSKEY_LARGE_BLOB_MISSING_CODE,
   PASSKEY_PRF_MISSING_CODE
 }
