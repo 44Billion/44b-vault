@@ -44,6 +44,16 @@ function init () {
       console.log(err)
       if (err?.code === PASSKEY_PRF_MISSING_CODE) {
         showErrorOverlay(t({ key: 'unlockAccountError' }), t({ key: 'passkeyPrfMissing' }))
+      } else if (err.name === 'NotAllowedError') {
+        showErrorOverlay(t({ key: 'unlockAccountError' }), t({ key: 'multiDeviceLoginUnsupported' }))
+        if (currentAccount?.pubkey) {
+          try {
+            await idb.deleteAccountByPubkey(currentAccount.pubkey)
+            await setAccountsState()
+          } catch (cleanupErr) {
+            console.error('Failed to remove unsupported multi-device account:', cleanupErr)
+          }
+        }
       } else {
         showErrorOverlay(t({ key: 'unlockAccountError' }))
       }

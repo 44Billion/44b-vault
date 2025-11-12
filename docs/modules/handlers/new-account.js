@@ -96,8 +96,11 @@ async function createAccount (privkey) {
       // See https://github.com/bitwarden/clients/issues/12590
       if (
         err.message?.includes("Invalid 'sameOriginWithAncestors' value")
-      ) errorMessage = t({ key: 'createAccountInIframeError' })
-      else errorMessage = 'SECURE_ELEMENT_STORE_ERROR'
+      ) {
+        errorMessage = t({ key: 'createAccountInIframeError' })
+      } else {
+        errorMessage = t({ key: 'createAccountUnsupportedBrowser' })
+      }
       console.error(err)
       throw new Error(errorMessage)
     }

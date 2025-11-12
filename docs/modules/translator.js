@@ -65,6 +65,10 @@ const locales = {
     en: 'Creating account from inside an iframe may not work with some browser extensions. Please try again or use a different browser.',
     pt: 'Criar conta de dentro de um iframe pode não funcionar com algumas extensões de navegador. Tente novamente ou use outro navegador.'
   },
+  createAccountUnsupportedBrowser: {
+    en: 'Your browser (or password manager) isn\'t supported. Please, try another one.',
+    pt: 'Seu navegador (ou gerenciador de senhas) não é compatível. Por favor, tente outro.'
+  },
   displayNameRequired: { en: 'Name is required', pt: 'Nome é obrigatório' },
   // /lock
   nameAccountGroup: { en: 'Give a name to this account group:', pt: 'Dê um nome p/ este grupo de contas:', hasDomNode: true },
@@ -86,6 +90,10 @@ const locales = {
   passkeyPrfMissing: {
     en: 'This passkey is missing the data required to unlock it. Export your nsec on another device and sign in here with the nsec to restore it.',
     pt: 'Esta passkey está sem os dados necessários para destravá-la. Exporte a nsec em outro dispositivo e entre aqui usando a nsec para restaurá-la.'
+  },
+  multiDeviceLoginUnsupported: {
+    en: 'Your browser (or password manager) doesn\'t support multi-device login yet.',
+    pt: 'Seu navegador (ou gerenciador de senhas) ainda não suporta login em múltiplos dispositivos.'
   },
   // modules/messenger.js
   reqIdTypeError: { en: 'reqId field must be a string', pt: 'Campo reqId precisa ser textual' },
