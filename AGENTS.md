@@ -24,7 +24,8 @@ The vault operates within an iframe to create a security boundary:
 ### Key Management
 - **Generation**: Creates new Nostr private keys
 - **Import/Export**: Supports key portability
-- **Storage**: Uses browser Passkeys API creatively by setting `user.id` to the Nostr private key
+- **Storage**: Uses passkey's `largeBlob` extension to store the Nostr private key,
+which is encrypted using a deterministic key derived with the `prf` extension help.
 - **Auto-sync**: Leverages browser's credential sync capabilities
 - **Client-side only**: No servers involved in key operations
 
