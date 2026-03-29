@@ -120,7 +120,7 @@ export default class NostrSigner {
       return { payload: result }
     } catch (err) {
       const [errorCode, ...messages] = err.message.split(':')
-      const error = new Error(messages[0][0] === ' ' ? messages.join(':').slice(1) : messages.join(':'))
+      const error = new Error(messages.length ? (messages[0][0] === ' ' ? messages.join(':').slice(1) : messages.join(':')) : errorCode)
       const context = {
         code: errorCode,
         eventKind

@@ -19,7 +19,7 @@ async function hasInternetConnectivity () {
       await ping(url)
       return true
     } catch (err) {
-      console.warn('[worker-service] connectivity probe failed', url, err?.message ?? err)
+      console.warn('connectivity probe failed', url, err?.message ?? err)
     }
   }
   return false
