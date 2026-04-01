@@ -5,6 +5,7 @@ import { translateTo, t } from 'translator'
 import { router } from 'router'
 import idb from 'idb'
 import NostrSigner from 'nostr-signer'
+import { eventToProfile, eventToRelays } from 'queries'
 
 let reqId = 0
 const {
@@ -118,6 +119,33 @@ export async function initMessenger () {
         // also from browser side
         case 'OPEN_VAULT_HOME': {
           router.goBack({ toRoot: true })
+          return
+        }
+        case 'UPDATE_ACCOUNT_EVENTS': {
+          const { pubkey, events } = e.data.payload
+          const account = pubkey ? await idb.getAccountByPubkey(pubkey) : null
+          if (account && Array.isArray(events) && events.length) {
+            let updated = false
+            for (const event of events) {
+              if (event.kind === 0) {
+                const storedTs = account.profile?.meta?.events?.[0]?.created_at ?? 0
+                if (event.created_at > storedTs) {
+                  account.profile = await eventToProfile(event)
+                  updated = true
+                }
+              } else if (event.kind === 10002) {
+                const storedTs = account.relays?.meta?.events?.[0]?.created_at ?? 0
+                if (event.created_at > storedTs) {
+                  account.relays = eventToRelays(event)
+                  updated = true
+                }
+              }
+            }
+            if (updated) {
+              await idb.createOrUpdateAccount(account)
+              setAccountsState() // async, don't await
+            }
+          }
           return
         }
         case 'NIP07': {
