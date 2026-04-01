@@ -18,7 +18,7 @@ function init () {
 
   unlockAccountBtn.addEventListener('click', async () => {
     unlockAccountBtn.disabled = true
-    unlockAccountBtn.getElementsByClassName('t-unlockAccount')[0].classList.add('pulsate')
+    unlockAccountBtn.getElementsByClassName('t-unlock-account')[0].classList.add('pulsate')
 
     overlayAbortController = new AbortController()
     const currentUnlockReqId = unlockReqId
@@ -64,7 +64,7 @@ function init () {
       }
     } finally {
       unlockAccountBtn.disabled = false
-      unlockAccountBtn.getElementsByClassName('t-unlockAccount')[0].classList.remove('pulsate')
+      unlockAccountBtn.getElementsByClassName('t-unlock-account')[0].classList.remove('pulsate')
     }
   })
 
