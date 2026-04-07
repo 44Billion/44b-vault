@@ -7,19 +7,20 @@ export async function isOnline () {
 }
 
 const CONNECTIVITY_PROBE_URLS = [
-  'https://www.gstatic.com/generate_204',
-  'https://connectivitycheck.gstatic.com/generate_204',
-  'https://captive.apple.com/hotspot-detect.html'
+  { url: 'https://www.gstatic.com/generate_204' },
+  { url: 'https://connectivitycheck.gstatic.com/generate_204' },
+  { url: 'https://captive.apple.com/hotspot-detect.html' },
+  { method: 'GET', url: 'https://connectivity-check.ubuntu.com' }
 ]
 
 async function hasInternetConnectivity () {
   const candidates = shuffleConnectivityProbes(CONNECTIVITY_PROBE_URLS)
-  for (const url of candidates) {
+  for (const candidate of candidates) {
     try {
-      await ping(url)
+      await ping(candidate.url, { method: candidate.method })
       return true
     } catch (err) {
-      console.warn('connectivity probe failed', url, err?.message ?? err)
+      console.warn('connectivity probe failed', candidate.url, err?.message ?? err)
     }
   }
   return false
@@ -34,12 +35,12 @@ function shuffleConnectivityProbes (urls) {
   return copy
 }
 
-async function ping (url, timeout = 5000) {
+async function ping (url, { method = 'HEAD', timeout = 5000 } = {}) {
   const abortController = typeof AbortController === 'function' ? new AbortController() : null
   let timerId = null
 
   const fetchPromise = fetch(url, {
-    method: 'HEAD',
+    method,
     mode: 'no-cors',
     cache: 'no-store',
     redirect: 'follow',
