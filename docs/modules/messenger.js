@@ -151,14 +151,7 @@ export async function initMessenger () {
         case 'NIP07': {
           const { pubkey, method, params, app = {}, ns = [] } = e.data.payload
           const [nsName = '', ...nsParams] = ns
-          resData = await NostrSigner.run({
-            app: {
-              ...app,
-              // For now, nip07 calls are always from browser itself, not from apps
-              id: null
-            },
-            ns, pubkey, method, params
-          })
+          resData = await NostrSigner.run({ ns, pubkey, method, params })
 
           idb.appendLog({
             origin: e.origin, // iframe parent

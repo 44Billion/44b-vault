@@ -30,10 +30,6 @@ const routes = {
     page: 1,
     stateKey: null
   },
-  '/permissions': {
-    page: 1,
-    stateKey: null
-  },
   '/logout': {
     page: 1,
     stateKey: null

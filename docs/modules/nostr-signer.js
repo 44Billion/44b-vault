@@ -87,7 +87,7 @@ export default class NostrSigner {
     clearTimeout(this.#conversationKeyGcTimeout)
   }
 
-  static async run ({ app, pubkey, method, params }) {
+  static async run ({ pubkey, method, params }) {
     let eventKind
     try {
       const account = await idb.getAccountByPubkey(pubkey)
@@ -108,12 +108,6 @@ export default class NostrSigner {
           default: return -1 // all kinds
         }
       })()
-
-      // empty app.id means it's a call meant for the napp browser itself
-      if (app?.id) {
-        const permitted = await signer.#hasPermission(app.id, method, eventKind)
-        if (!permitted) throw new Error('not-permitted: Not allowed to ' + method)
-      }
 
       const reqId = JSON.stringify([method, params])
       const result = await signer.#getResultsByReqId(reqId, method, params)
@@ -142,20 +136,6 @@ export default class NostrSigner {
         .forEach(v => delete this.#resultsByReqId[v])
       this.#scheduleResultGc()
     }, 60000)
-  }
-
-  static methodNameToPermissionName = {
-    getPublicKey: 'readProfile',
-    signEvent: 'signEvent',
-    nip04Encrypt: 'encrypt',
-    nip04Decrypt: 'decrypt',
-    nip44Encrypt: 'encrypt',
-    nip44Decrypt: 'decrypt'
-  }
-  #hasPermission (appId, name, eKind) {
-    name = NostrSigner.methodNameToPermissionName[name]
-    if (!name) throw new Error('internal-error: Unknown permission name ' + name)
-    return idb.hasPermission(appId, name, eKind)
   }
 
   getPublicKey () {

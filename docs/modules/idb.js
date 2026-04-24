@@ -11,7 +11,7 @@ async function initDb (...args) {
     return db
   }))
 }
-function _initDb (dbName = '44b-vault', dbVersion = 2) {
+function _initDb (dbName = '44b-vault', dbVersion = 3) {
   const req = indexedDB.open(dbName, dbVersion)
   // eslint-disable-next-line prefer-const, promise/param-names
   let resolve, reject, promise = new Promise((rs, rj) => { resolve = rs; reject = rj })
@@ -52,18 +52,6 @@ function _initDb (dbName = '44b-vault', dbVersion = 2) {
       db.createObjectStore('logs', { keyPath: 'id', autoIncrement: true })
       /*
       {
-        appId, // +[+][+]..., tlv without relay hints, from +<fullAppId>
-        name, // e.g.: 'decryption|signing|new-permission-example|...'
-        eKind, // e.g.: '<0|1|10002|...|-1 means "all kinds">'
-        ts
-      }
-      */
-      // NOTE: keyPath order is ['appId','name','eKind'] (name before eKind) so we can
-      // efficiently range-query both the specific kind and the wildcard (-1) in a single
-      // request: IDBKeyRange.bound([appId,name,-1],[appId,name,targetKind])
-      db.createObjectStore('permissions', { keyPath: ['appId', 'name', 'eKind'] })
-      /*
-      {
         id, // +[+][+]..., from +<fullAppId>
         alias, // +[+][+]abc@44billion.net, i.e. from +<appIdAlias>[@<domain>]
         name, // from bundleMetadata event
@@ -83,6 +71,11 @@ function _initDb (dbName = '44b-vault', dbVersion = 2) {
 
       if (!queueStore.indexNames.contains('type')) {
         queueStore.createIndex('type', 'type', { unique: false })
+      }
+    }
+    if (e.oldVersion < 3) {
+      if (Array.from(db.objectStoreNames).includes('permissions')) {
+        db.deleteObjectStore('permissions')
       }
     }
   }
@@ -318,29 +311,6 @@ async function hasLoggedInUsers () {
   return run('openKeyCursor', [undefined, 'next'], 'accounts').then(v => !!v.result)
 }
 
-async function hasPermission (appId, name, eKind) {
-  if (!appId || !name || eKind == null) throw new Error('appId, name and eKind are required')
-  if (eKind === -1 /* wildcard */) {
-    return run('get', [[appId, name, -1]], 'permissions').then(v => !!v.result)
-  }
-
-  const range = IDBKeyRange.bound([appId, name, -1], [appId, name, eKind])
-  const p = Promise.withResolvers()
-  run('openKeyCursor', [range], 'permissions', null, { p })
-
-  let cursor
-  let keyEKind
-  const continueKey = [appId, name, eKind]
-  while ((cursor = (await p.promise).result)) {
-    keyEKind = cursor.primaryKey[2]
-    if (keyEKind === -1 || keyEKind === eKind) return true
-
-    Object.assign(p, Promise.withResolvers())
-    cursor.continue(continueKey)
-  }
-  return false
-}
-
 Object.assign(idb, {
   run,
   createOrUpdateAccount,
@@ -349,7 +319,6 @@ Object.assign(idb, {
   getAllAccounts,
   deleteAccountByPubkey,
   hasLoggedInUsers,
-  hasPermission,
   appendLog,
   enqueueQueueEntry,
   deleteQueueEntryById,

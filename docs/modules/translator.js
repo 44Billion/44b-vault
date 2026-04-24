@@ -45,7 +45,6 @@ const locales = {
   addAccountWithNsecButton: { en: 'Add Account', pt: 'Adicionar Conta', hasDomNode: true },
 
   backupKeys: { en: 'Backup Accounts', pt: 'Fazer Backup das Contas', hasDomNode: true },
-  permissions: { en: 'Permissions', pt: 'Permissões', hasDomNode: true },
   logout: { en: 'Log Out', pt: 'Sair', hasDomNode: true },
   // /logout
   logoutAccount: { en: 'Log Account Out', pt: 'Sair da Conta' },
